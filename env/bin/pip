@@ -1,0 +1,10 @@
+#!/bin/sh
+'''exec' "/mnt/aeedeb85-775c-4f31-a639-4a6c86fe9da7/[05] Garapan/[02] Latihan_Programming/Tes Python/FastAPI/postgre_app/env/bin/python3" "$0" "$@"
+' '''
+# -*- coding: utf-8 -*-
+import re
+import sys
+from pip._internal.cli.main import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
