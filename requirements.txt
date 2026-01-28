@@ -17,4 +17,5 @@ pydantic-settings==2.5.2
 
 # Utilities
 python-dotenv==1.0.1
+psycopg2==2.9.9
 
