@@ -48,7 +48,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-###4. Run with Docker
+### 4. Run with Docker
 ```bash
 docker-compose up -d --build
 ```
