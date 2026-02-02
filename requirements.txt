@@ -9,7 +9,8 @@ aiomysql==0.2.0   # if using MySQL (optional, pick one driver)
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
-passlib[argon]
+argon2-cffi
+passlib
 idna==3.7
 email-validator==2.1.0.post1
 
