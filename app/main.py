@@ -65,12 +65,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await database.fetch_one(
         users.select().where(users.c.email == form_data.username)
     )
-    if not user:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
-    if not verify_password(form_data.password, user["password"]):
+    if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
-    token = create_access_token({"sub": str(user["id"])})
+    token = create_access_token(str(user["id"]))
     return {"access_token": token, "token_type": "bearer"}
 
 
