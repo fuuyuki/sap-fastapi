@@ -27,19 +27,33 @@ async def shutdown():
     await database.disconnect()
 
 
-# --- User Registration ---
 @app.post("/register")
 async def register(user: schemas.UserIn):
-    # Hash password before storing
-    hashed_pw = hash_password(user.password)
-    query = users.insert().values(
-        name=user.name,
-        email=user.email,
-        password=hashed_pw,
+    # Check if email already exists
+    existing_user = await database.fetch_one(
+        users.select().where(users.c.email == user.email)
     )
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Hash password securely
+    hashed_pw = hash_password(user.password)
+
+    # Insert and return UUID
+    query = (
+        users.insert()
+        .values(
+            name=user.name,
+            email=user.email,
+            password=hashed_pw,
+        )
+        .returning(users.c.id)
+    )
+
     user_id = await database.execute(query)
+
     return {
-        "id": user_id,
+        "id": str(user_id),
         "email": user.email,
         "message": "User registered successfully",
     }

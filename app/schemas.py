@@ -1,13 +1,14 @@
 from datetime import datetime, time
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, StringConstraints
 
 
 class UserIn(BaseModel):
     name: str
     email: EmailStr
-    password: str
+    password: Annotated[str, StringConstraints(min_length=8)]
 
 
 class UserOut(BaseModel):
