@@ -22,7 +22,7 @@ app = FastAPI(title="SAP API")
 @app.on_event("startup")
 async def startup():
     await database.connect()
-    # asyncio.create_task(auto_offline_check())
+    asyncio.create_task(auto_offline_check())
 
 
 @app.on_event("shutdown")
