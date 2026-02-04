@@ -97,6 +97,7 @@ medlogs = Table(
     ),
     Column("pillname", String(100)),
     Column("taken_at", TIMESTAMP, server_default=func.now(), nullable=False),
+    Column("schedule_time", TIMESTAMP),
     Column("status", String(20), nullable=False),
     CheckConstraint("status IN ('taken','missed')", name="status_check"),
 )

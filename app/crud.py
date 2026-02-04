@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from .database import database
@@ -179,3 +179,22 @@ async def update_medlog(medlog_id, pillname, status):
 async def delete_medlog(medlog_id):
     query = medlogs.delete().where(medlogs.c.id == medlog_id)
     return await database.execute(query)
+
+
+async def get_adherence_streak(user_id: UUID) -> int:
+    # Get last 30 days of logs (adjust window as needed)
+    start = datetime.now().date() - timedelta(days=30)
+    query = (
+        medlogs.select()
+        .where(medlogs.c.user_id == user_id, medlogs.c.schedule_time >= start)
+        .order_by(medlogs.c.schedule_time.desc())
+    )
+
+    rows = await database.fetch_all(query)
+    streak = 0
+    for row in rows:
+        if row["status"] == "taken":
+            streak += 1
+        else:
+            break
+    return streak

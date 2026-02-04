@@ -124,6 +124,12 @@ async def delete_user(user_id: UUID):
     return {"message": "User deleted successfully"}
 
 
+@app.get("/users/{user_id}/adherence-streak", response_model=schemas.AdherenceStreak)
+async def adherence_streak(user_id: UUID):
+    streak = await crud.get_adherence_streak(user_id)
+    return schemas.AdherenceStreak(streak=streak)
+
+
 # --- Device Endpoints ---
 @app.post("/devices/", response_model=schemas.DeviceOut)
 async def create_device(

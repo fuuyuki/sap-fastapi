@@ -62,3 +62,7 @@ class MedlogOut(MedlogIn):
     id: UUID
     user_id: UUID
     taken_at: datetime
+
+
+class AdherenceStreak(BaseModel):
+    streak: int
