@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from .database import database
@@ -74,6 +75,16 @@ async def update_device(device_id, name, chip_id):
         .values(name=name, chip_id=chip_id)
     )
     return await database.execute(query)
+
+
+async def update_device_heartbeat(device_id: UUID) -> bool:
+    query = (
+        devices.update()
+        .where(devices.c.id == device_id)
+        .values(status="online", last_seen=datetime.now(timezone.utc))
+    )
+    result = await database.execute(query)
+    return result
 
 
 async def delete_device(device_id):

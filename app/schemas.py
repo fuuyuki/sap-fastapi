@@ -36,7 +36,8 @@ class DeviceIn(BaseModel):
 class DeviceOut(DeviceIn):
     id: UUID
     user_id: UUID
-    paired_at: datetime
+    status: str | None = None
+    last_seen: datetime | None = None
 
 
 class ScheduleIn(BaseModel):

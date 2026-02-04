@@ -40,7 +40,13 @@ devices = Table(
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), nullable=False),
     Column("name", String(100), nullable=False),
     Column("chip_id", String(100), unique=True, nullable=False),
-    Column("paired_at", TIMESTAMP, server_default=func.now(), nullable=False),
+    Column("status", String, default="offline"),
+    Column(
+        "last_seen",
+        TIMESTAMP(timezone=False),
+        server_default=func.now(),
+        nullable=False,
+    ),
 )
 schedules = Table(
     "schedules",

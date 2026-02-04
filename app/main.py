@@ -1,3 +1,5 @@
+import asyncio
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -20,11 +22,24 @@ app = FastAPI(title="SAP API")
 @app.on_event("startup")
 async def startup():
     await database.connect()
+    # asyncio.create_task(auto_offline_check())
 
 
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
+
+
+async def auto_offline_check():
+    while True:
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+        query = (
+            devices.update()
+            .where(devices.c.last_seen < cutoff)
+            .values(status="offline")
+        )
+        await database.execute(query)
+        await asyncio.sleep(60)  # run every 60 seconds
 
 
 @app.post("/register")
@@ -151,6 +166,19 @@ async def update_my_device(
     await crud.update_device(device_id, device.name, device.chip_id)
     updated = await crud.get_device(device_id)
     return updated
+
+
+@app.post("/devices/{device_id}/heartbeat", response_model=schemas.DeviceOut)
+async def heartbeat(device_id: UUID):
+    updated = await crud.update_device_heartbeat(device_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    device = await database.fetch_one(devices.select().where(devices.c.id == device_id))
+    if device is None:  # safeguard
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    return schemas.DeviceOut(**dict(device))
 
 
 @app.delete("/devices/{device_id}")
