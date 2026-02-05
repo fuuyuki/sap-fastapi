@@ -88,13 +88,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 # --- User Endpoints ---
-@app.post("/users/", response_model=schemas.UserOut)
-async def create_user(user: schemas.UserIn):
-    user_id = await crud.create_user(user.name, user.email, user.password)
-    new_user = await crud.get_user(user_id)
-    return new_user
-
-
 @app.get("/users/", response_model=list[schemas.UserOut])
 async def read_users():
     return await crud.get_users()
@@ -296,14 +289,6 @@ async def create_medlog(
 @app.get("/medlogs/", response_model=list[schemas.MedlogOut])
 async def read_my_medlogs(user_id: UUID = Depends(get_current_user_id)):
     return await crud.get_medlogs(user_id)
-
-
-@app.get("/medlogs/{medlog_id}", response_model=schemas.MedlogOut)
-async def read_medlog(medlog_id: UUID, user_id: UUID = Depends(get_current_user_id)):
-    medlog = await crud.get_medlog_by_user(medlog_id, user_id)
-    if not medlog:
-        raise HTTPException(status_code=404, detail="Medlog not found")
-    return medlog
 
 
 @app.put("/medlogs/{medlog_id}", response_model=schemas.MedlogOut)

@@ -17,12 +17,6 @@ async def authenticate_user(email: str, password: str):
     return user
 
 
-async def create_user(name: str, email: str, password: str):
-    hashed_pw = hash_password(password)
-    query = users.insert().values(name=name, email=email, password=hashed_pw)
-    return await database.execute(query)
-
-
 async def get_users():
     query = users.select()
     return await database.fetch_all(query)
@@ -155,11 +149,6 @@ async def get_medlogs(user_id):
         .order_by(medlogs.c.taken_at.desc())
     )
     return await database.fetch_all(query)
-
-
-async def get_medlog(medlog_id):
-    query = medlogs.select().where(medlogs.c.id == medlog_id)
-    return await database.fetch_one(query)
 
 
 async def get_medlog_by_user(medlog_id, user_id):
