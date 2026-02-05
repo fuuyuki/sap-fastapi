@@ -55,6 +55,7 @@ class ScheduleOut(ScheduleIn):
 class MedlogIn(BaseModel):
     device_id: UUID
     pillname: str
+    schedule_time: datetime
     status: str  # must be "taken" or "missed"
 
 
@@ -66,3 +67,13 @@ class MedlogOut(MedlogIn):
 
 class AdherenceStreak(BaseModel):
     streak: int
+
+
+class NextDose(BaseModel):
+    schedule_id: UUID
+    pillname: str
+    dose_time: time
+
+
+class WeeklyAdherence(BaseModel):
+    adherence: float  # value between 0.0 and 1.0

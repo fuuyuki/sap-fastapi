@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+from sqlalchemy import func
+
 from .database import database
 from .models import devices, medlogs, schedules, users
 from .security import hash_password, verify_password
@@ -198,3 +200,46 @@ async def get_adherence_streak(user_id: UUID) -> int:
         else:
             break
     return streak
+
+
+async def get_next_dose(user_id: UUID):
+    query = (
+        schedules.select()
+        .where(schedules.c.user_id == user_id, schedules.c.dose_time > datetime.now())
+        .order_by(schedules.c.dose_time.asc())
+        .limit(1)
+    )
+    row = await database.fetch_one(query)
+    return dict(row) if row else None
+
+
+async def get_weekly_adherence(user_id: UUID) -> float:
+    start = datetime.now() - timedelta(days=7)
+
+    # Count taken doses
+    taken_query = (
+        medlogs.select()
+        .with_only_columns(func.count())
+        .where(
+            medlogs.c.user_id == user_id,
+            medlogs.c.status == "taken",
+            medlogs.c.scheduled_time >= start,
+        )
+    )
+    taken = await database.fetch_val(taken_query)
+
+    # Count missed doses
+    missed_query = (
+        medlogs.select()
+        .with_only_columns(func.count())
+        .where(
+            medlogs.c.user_id == user_id,
+            medlogs.c.status == "missed",
+            medlogs.c.scheduled_time >= start,
+        )
+    )
+    missed = await database.fetch_val(missed_query)
+
+    total = taken + missed
+    adherence = taken / total if total > 0 else 0.0
+    return adherence * 100

@@ -130,6 +130,22 @@ async def adherence_streak(user_id: UUID):
     return schemas.AdherenceStreak(streak=streak)
 
 
+@app.get("/users/{user_id}/next-dose", response_model=schemas.NextDose)
+async def next_dose(user_id: UUID):
+    dose = await crud.get_next_dose(user_id)
+    if not dose:
+        raise HTTPException(status_code=404, detail="No upcoming dose found")
+    return schemas.NextDose(
+        schedule_id=dose["id"], pillname=dose["pillname"], dose_time=dose["dose_time"]
+    )
+
+
+@app.get("/users/{user_id}/weekly-adherence", response_model=schemas.WeeklyAdherence)
+async def weekly_adherence(user_id: UUID):
+    adherence = await crud.get_weekly_adherence(user_id)
+    return schemas.WeeklyAdherence(adherence=adherence)
+
+
 # --- Device Endpoints ---
 @app.post("/devices/", response_model=schemas.DeviceOut)
 async def create_device(
