@@ -32,13 +32,14 @@ async def update_user(user_id: UUID, name: str, email: str, password: str):
         users.update()
         .where(users.c.id == user_id)
         .values(name=name, email=email, password=password)
+        .returning(users.c.id)
     )
-    return await database.execute(query)
+    return await database.fetch_one(query)
 
 
 async def delete_user(user_id: UUID):
-    query = users.delete().where(users.c.id == user_id)
-    return await database.execute(query)
+    query = users.delete().where(users.c.id == user_id).returning(users.c.id)
+    return await database.fetch_one(query)
 
 
 # Device Section
@@ -84,8 +85,8 @@ async def update_device_heartbeat(device_id: UUID) -> bool:
 
 
 async def delete_device(device_id):
-    query = devices.delete().where(devices.c.id == device_id)
-    return await database.execute(query)
+    query = devices.delete().where(devices.c.id == device_id).returning(devices.c.id)
+    return await database.fetch_one(query)
 
 
 # Schedule Section
@@ -127,8 +128,12 @@ async def update_schedule(schedule_id, pillname, dose_time, repeat_days):
 
 
 async def delete_schedule(schedule_id):
-    query = schedules.delete().where(schedules.c.id == schedule_id)
-    return await database.execute(query)
+    query = (
+        schedules.delete()
+        .where(schedules.c.id == schedule_id)
+        .returning(schedules.c.id)
+    )
+    return await database.fetch_one(query)
 
 
 # Medlog Section
@@ -168,8 +173,8 @@ async def update_medlog(medlog_id, pillname, status):
 
 
 async def delete_medlog(medlog_id):
-    query = medlogs.delete().where(medlogs.c.id == medlog_id)
-    return await database.execute(query)
+    query = medlogs.delete().where(medlogs.c.id == medlog_id).returning(medlogs.c.id)
+    return await database.fetch_one(query)
 
 
 async def get_adherence_streak(user_id: UUID) -> int:

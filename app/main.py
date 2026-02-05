@@ -106,7 +106,7 @@ async def update_user(user_id: UUID, user: schemas.UserIn):
     updated = await crud.update_user(user_id, user.name, user.email, user.password)
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"message": "User updated successfully"}
+    return {"message": "User updated successfully", "user": updated}
 
 
 @app.delete("/users/{user_id}")
@@ -114,7 +114,7 @@ async def delete_user(user_id: UUID):
     deleted = await crud.delete_user(user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"message": "User deleted successfully"}
+    return {"message": "User deleted successfully", "user": deleted}
 
 
 @app.get("/users/{user_id}/adherence-streak", response_model=schemas.AdherenceStreak)
@@ -209,7 +209,7 @@ async def delete_my_device(
     deleted = await crud.delete_device(device_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Device not found")
-    return {"message": "Device deleted successfully"}
+    return {"message": "Device deleted successfully", "device_id": deleted}
 
 
 # --- Schedule Endpoints ---
@@ -265,7 +265,7 @@ async def delete_my_schedule(
     deleted = await crud.delete_schedule(schedule_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Schedule not found")
-    return {"message": "Schedule deleted successfully"}
+    return {"message": "Schedule deleted successfully", "schedule_id": deleted}
 
 
 # --- Medlog Endpoints ---
@@ -321,4 +321,4 @@ async def delete_my_medlog(
     deleted = await crud.delete_medlog(medlog_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Medlog not found")
-    return {"message": "Medlog deleted successfully"}
+    return {"message": "Medlog deleted successfully", "medlog_id": deleted}
