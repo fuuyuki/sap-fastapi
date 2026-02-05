@@ -5,7 +5,7 @@ from sqlalchemy import func
 
 from .database import database
 from .models import devices, medlogs, schedules, users
-from .security import hash_password, verify_password
+from .security import verify_password
 
 
 # User Section
@@ -161,15 +161,6 @@ async def get_medlog_by_user(medlog_id, user_id):
         (medlogs.c.id == medlog_id) & (medlogs.c.user_id == user_id)
     )
     return await database.fetch_one(query)
-
-
-async def update_medlog(medlog_id, pillname, status):
-    query = (
-        medlogs.update()
-        .where(medlogs.c.id == medlog_id)
-        .values(pillname=pillname, status=status)
-    )
-    return await database.execute(query)
 
 
 async def delete_medlog(medlog_id):

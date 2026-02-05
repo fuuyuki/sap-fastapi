@@ -291,25 +291,6 @@ async def read_my_medlogs(user_id: UUID = Depends(get_current_user_id)):
     return await crud.get_medlogs(user_id)
 
 
-@app.put("/medlogs/{medlog_id}", response_model=schemas.MedlogOut)
-async def update_my_medlog(
-    medlog_id: UUID,
-    medlog: schemas.MedlogIn,
-    user_id: UUID = Depends(get_current_user_id),
-):
-    existing = await crud.get_medlog_by_user(medlog_id, user_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Medlog not found")
-
-    await crud.update_medlog(
-        medlog_id,
-        medlog.pillname,
-        medlog.status,
-    )
-    updated = await crud.get_medlog(medlog_id)
-    return updated  # ✅ return full object, not message
-
-
 @app.delete("/medlogs/{medlog_id}")
 async def delete_my_medlog(
     medlog_id: UUID, user_id: UUID = Depends(get_current_user_id)
