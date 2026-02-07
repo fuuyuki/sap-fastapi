@@ -74,14 +74,14 @@ async def update_device(device_id, name, chip_id):
     return await database.execute(query)
 
 
-async def update_device_heartbeat(device_id: UUID) -> bool:
+async def update_device_heartbeat(chip_id: str) -> bool:
     query = (
         devices.update()
-        .where(devices.c.id == device_id)
+        .where(devices.c.chip_id == chip_id)
         .values(status="online", last_seen=datetime.now(timezone.utc))
     )
     result = await database.execute(query)
-    return result
+    return bool(result)
 
 
 async def delete_device(device_id):

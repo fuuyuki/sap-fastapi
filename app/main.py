@@ -183,13 +183,15 @@ async def update_my_device(
     return updated
 
 
-@app.post("/devices/{device_id}/heartbeat", response_model=schemas.DeviceOut)
-async def heartbeat(device_id: UUID):
-    updated = await crud.update_device_heartbeat(device_id)
+@app.post("/devices/{chip_id}/heartbeat", response_model=schemas.DeviceOut)
+async def heartbeat(chip_id: str):
+    updated = await crud.update_device_heartbeat(chip_id)
     if not updated:
         raise HTTPException(status_code=404, detail="Device not found")
 
-    device = await database.fetch_one(devices.select().where(devices.c.id == device_id))
+    device = await database.fetch_one(
+        devices.select().where(devices.c.chip_id == chip_id)
+    )
     if device is None:  # safeguard
         raise HTTPException(status_code=404, detail="Device not found")
 
