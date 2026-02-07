@@ -6,7 +6,7 @@ from sqlalchemy import MetaData, create_engine
 # Load DATABASE_URL from environment (set in docker-compose.yml)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg2://fauxpg:kelapasawit1@localhost:5432/sapdb",  # fallback default
+    "postgresql+psycopg2://fauxpg:kelapasawit1@db:5432/sapdb",  # fallback default
 )
 
 # Async database connection (used with FastAPI)
