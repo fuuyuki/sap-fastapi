@@ -78,7 +78,8 @@ async def create_device(
 # --- Get schedules by user_id ---
 async def get_devices_by_user(user_id: UUID):
     query = devices.select().where(devices.c.user_id == user_id)
-    return await database.fetch_all(query)
+    records = await database.fetch_all(query)
+    return [dict(r) for r in records]  # convert Record objects to dicts
 
 
 # --- Get schedules by chip_id (device) ---

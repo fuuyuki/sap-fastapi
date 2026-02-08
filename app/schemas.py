@@ -39,12 +39,15 @@ class DeviceBase(BaseModel):
     status: str = "offline"
 
 
-class DeviceCreate(DeviceBase):
+class DeviceCreate(BaseModel):
+    chip_id: str
     user_id: UUID
+    name: str
+    status: str = "offline"
 
 
-class DeviceRead(DeviceBase):
-    user_id: UUID
+class DeviceRead(DeviceCreate):
+    id: UUID
     last_seen: datetime
     api_key: str
 
