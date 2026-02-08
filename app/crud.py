@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from .database import database
 from .models import devices, medlogs, notifications, schedules, users

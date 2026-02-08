@@ -11,6 +11,12 @@ class LoginRequest(BaseModel):
 
 
 # 1. Users
+
+
+class UserMe(BaseModel):
+    user_id: UUID
+
+
 class UserBase(BaseModel):
     name: str
     email: EmailStr

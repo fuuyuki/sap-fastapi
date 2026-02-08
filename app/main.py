@@ -89,6 +89,14 @@ async def login_form(form_data: OAuth2PasswordRequestForm = Depends()):
 # ---------------------------
 # USERS (App + Admin)
 # ---------------------------
+
+
+@app.get("/me", response_model=schemas.UserMe)
+async def read_me(current_user_id: str = Depends(get_current_user_id)):
+    # Simply return the user_id from the JWT
+    return {"user_id": current_user_id}
+
+
 @app.get("/users/", response_model=List[schemas.UserRead])
 async def list_users():
     return await crud.get_users()
