@@ -21,16 +21,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d   # mount init.sql and other scripts
-   
-  migrate:
-    image: postgres:15
-    depends_on:
-      - db
-    volumes:
-      - ./db/migrations:/migrations
-    entrypoint: ["sh", "-c", "for f in /migrations/*.sql; do psql -h db -U fauxpg -d sapdb -f $f; done"]
-    environment:
-      PGPASSWORD: kelapasawit1
 
 volumes:
   postgres_data:
