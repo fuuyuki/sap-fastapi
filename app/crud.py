@@ -55,12 +55,18 @@ async def create_device(
     query = (
         devices.insert()
         .values(
-            chip_id=chip_id, user_id=user_id, name=name, api_key=api_key, status=status
+            chip_id=chip_id,
+            user_id=user_id,
+            name=name,
+            api_key=api_key,
+            last_seen=datetime.now(),
+            status=status,
         )
         .returning(
             devices.c.chip_id,
             devices.c.user_id,
             devices.c.name,
+            devices.c.last_seen,
             devices.c.api_key,
             devices.c.status,
         )
