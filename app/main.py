@@ -306,8 +306,6 @@ async def delete_medlog(medlog_id: UUID):
 # NOTIFICATIONS (App + ESP32)
 # ---------------------------
 
-app = FastAPI(title="Notifications API")
-
 
 # --- GET notifications by user_id (JWT protected) ---
 @app.get("/notifications/{user_id}", response_model=List[schemas.NotificationRead])
