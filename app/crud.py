@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -43,13 +44,30 @@ async def delete_user(user_id: UUID):
 # ---------------------------
 # DEVICES
 # ---------------------------
+
+
 async def create_device(
-    chip_id: str, user_id: UUID, name: str, api_key: str, status: str = "offline"
+    chip_id: str, user_id: UUID, name: str, status: str = "offline"
 ):
-    query = devices.insert().values(
-        chip_id=chip_id, user_id=user_id, name=name, api_key=api_key, status=status
+    # Generate a secure random API key
+    api_key = secrets.token_hex(32)
+
+    query = (
+        devices.insert()
+        .values(
+            chip_id=chip_id, user_id=user_id, name=name, api_key=api_key, status=status
+        )
+        .returning(
+            devices.c.id,
+            devices.c.chip_id,
+            devices.c.user_id,
+            devices.c.name,
+            devices.c.api_key,
+            devices.c.status,
+        )
     )
-    return await database.execute(query)
+
+    return await database.fetch_one(query)
 
 
 # --- Get schedules by user_id ---
@@ -188,18 +206,27 @@ async def delete_medlog(medlog_id: UUID):
 # ---------------------------
 # NOTIFICATIONS
 # ---------------------------
-async def create_notification(device_id: str, user_id: UUID, message: str):
+# --- Get notifications by user_id ---
+async def get_notifications_by_user(user_id: UUID):
+    query = notifications.select().where(notifications.c.user_id == user_id)
+    return await database.fetch_all(query)
+
+
+# --- Create notification by device (device_id / chip_id) ---
+async def create_notification_by_device(
+    device_id: str, user_id: UUID, message: str, created_at: datetime
+):
     query = (
         notifications.insert()
-        .values(device_id=device_id, user_id=user_id, message=message)
+        .values(
+            user_id=user_id, device_id=device_id, message=message, created_at=created_at
+        )
         .returning(notifications.c.id)
     )
-    return await database.execute(query)
-
-
-async def get_notification(notification_id: UUID):
-    query = notifications.select().where(notifications.c.id == notification_id)
-    return await database.fetch_one(query)
+    notif_id = await database.execute(query)
+    return await database.fetch_one(
+        notifications.select().where(notifications.c.id == notif_id)
+    )
 
 
 async def get_notifications(user_id: UUID = None, device_id: str = None):

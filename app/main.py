@@ -147,8 +147,15 @@ async def get_device(user_id: UUID):
 
 @app.post("/devices/", response_model=schemas.DeviceRead)
 async def create_device(device: schemas.DeviceCreate):
-    await crud.create_device(**device.dict())
-    return await crud.get_devices_by_user(device.user_id)
+    new_device = await crud.create_device(
+        chip_id=device.chip_id,
+        user_id=device.user_id,
+        name=device.name,
+        status=device.status,
+    )
+    if not new_device:
+        raise HTTPException(status_code=400, detail="Device creation failed")
+    return new_device
 
 
 @app.put("/devices/{chip_id}", response_model=schemas.DeviceRead)
@@ -298,15 +305,48 @@ async def delete_medlog(medlog_id: UUID):
 # ---------------------------
 # NOTIFICATIONS (App + ESP32)
 # ---------------------------
-@app.get("/notifications/", response_model=List[schemas.NotificationRead])
-async def list_notifications(user_id: UUID = None, device_id: str = None):
-    return await crud.get_notifications(user_id=user_id, device_id=device_id)
+
+app = FastAPI(title="Notifications API")
 
 
-@app.post("/notifications/", response_model=schemas.NotificationRead)
-async def create_notification(notification: schemas.NotificationCreate):
-    notif_id = await crud.create_notification(**notification.dict())
-    return await crud.get_notification(notif_id)
+# --- GET notifications by user_id (JWT protected) ---
+@app.get("/notifications/{user_id}", response_model=List[schemas.NotificationRead])
+async def list_notifications_by_user(
+    user_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),  # JWT validation
+):
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view these notifications"
+        )
+
+    notifs = await crud.get_notifications_by_user(user_id)
+    if not notifs:
+        raise HTTPException(status_code=404, detail="No notifications found for user")
+    return notifs
+
+
+# --- POST notification by device_id (API key protected) ---
+@app.post("/notifications/{device_id}", response_model=schemas.NotificationRead)
+async def create_notification_by_device(
+    device_id: str,
+    notif: schemas.NotificationCreate,
+    x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
+):
+    # Validate device + API key
+    device = await database.fetch_one(
+        devices.select().where(devices.c.chip_id == device_id)
+    )
+    if not device or device["api_key"] != x_api_key:
+        raise HTTPException(status_code=401, detail="Invalid device API key")
+
+    new_notif = await crud.create_notification_by_device(
+        device_id=device_id,
+        user_id=notif.user_id,
+        message=notif.message,
+        created_at=notif.created_at,
+    )
+    return new_notif
 
 
 @app.delete("/notifications/{notification_id}")
