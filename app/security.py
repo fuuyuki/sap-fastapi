@@ -25,7 +25,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 # --- OAuth2 ---
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login-form")
 
 
 def create_access_token(user_id: str, expires_delta: Optional[timedelta] = None) -> str:

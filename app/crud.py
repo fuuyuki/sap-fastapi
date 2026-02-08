@@ -1,25 +1,22 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func
 
 from .database import database
-from .models import devices, medlogs, schedules, users
-from .security import verify_password
+from .models import devices, medlogs, notifications, schedules, users
 
 
-# User Section
-async def authenticate_user(email: str, password: str):
-    query = users.select().where(users.c.email == email)
-    user = await database.fetch_one(query)
-    if not user or not verify_password(password, user["password"]):
-        return None
-    return user
-
-
-async def get_users():
-    query = users.select()
-    return await database.fetch_all(query)
+# ---------------------------
+# USERS
+# ---------------------------
+async def create_user(name: str, email: str, password_hash: str, role: str = "patient"):
+    query = (
+        users.insert()
+        .values(name=name, email=email, password_hash=password_hash, role=role)
+        .returning(users.c.id)
+    )
+    return await database.execute(query)
 
 
 async def get_user(user_id: UUID):
@@ -27,157 +24,213 @@ async def get_user(user_id: UUID):
     return await database.fetch_one(query)
 
 
-async def update_user(user_id: UUID, name: str, email: str, password: str):
-    query = (
-        users.update()
-        .where(users.c.id == user_id)
-        .values(name=name, email=email, password=password)
-        .returning(users.c.id)
-    )
-    return await database.fetch_one(query)
+async def get_users():
+    query = users.select()
+    return await database.fetch_all(query)
+
+
+async def update_user(user_id: UUID, data: dict):
+    query = users.update().where(users.c.id == user_id).values(**data)
+    await database.execute(query)
+    return await get_user(user_id)
 
 
 async def delete_user(user_id: UUID):
-    query = users.delete().where(users.c.id == user_id).returning(users.c.id)
-    return await database.fetch_one(query)
-
-
-# Device Section
-async def create_device(user_id, name, chip_id):
-    query = devices.insert().values(user_id=user_id, name=name, chip_id=chip_id)
+    query = users.delete().where(users.c.id == user_id)
     return await database.execute(query)
 
 
-async def get_devices(user_id):
+# ---------------------------
+# DEVICES
+# ---------------------------
+async def create_device(
+    chip_id: str, user_id: UUID, name: str, api_key: str, status: str = "offline"
+):
+    query = devices.insert().values(
+        chip_id=chip_id, user_id=user_id, name=name, api_key=api_key, status=status
+    )
+    return await database.execute(query)
+
+
+# --- Get schedules by user_id ---
+async def get_devices_by_user(user_id: UUID):
     query = devices.select().where(devices.c.user_id == user_id)
     return await database.fetch_all(query)
 
 
-async def get_device(device_id):
-    query = devices.select().where(devices.c.id == device_id)
-    return await database.fetch_one(query)
+# --- Get schedules by chip_id (device) ---
+async def get_devices_by_device(chip_id: str):
+    query = devices.select().where(devices.c.device_id == chip_id)
+    return await database.fetch_all(query)
 
 
-async def get_device_by_user(device_id, user_id):
-    query = devices.select().where(
-        (devices.c.id == device_id) & (devices.c.user_id == user_id)
-    )
-    return await database.fetch_one(query)
+async def get_devices():
+    query = devices.select()
+    return await database.fetch_all(query)
 
 
-async def update_device(device_id, name, chip_id):
-    query = (
-        devices.update()
-        .where(devices.c.id == device_id)
-        .values(name=name, chip_id=chip_id)
-    )
+async def update_device(chip_id: str, data: dict):
+    query = devices.update().where(devices.c.chip_id == chip_id).values(**data)
+    await database.execute(query)
+    return await get_device(chip_id)
+
+
+async def delete_device(chip_id: str):
+    query = devices.delete().where(devices.c.chip_id == chip_id)
     return await database.execute(query)
 
 
-async def update_device_heartbeat(chip_id: str) -> bool:
+async def heartbeat_device(chip_id: str):
     query = (
         devices.update()
         .where(devices.c.chip_id == chip_id)
-        .values(status="online", last_seen=datetime.now(timezone.utc))
-    )
-    result = await database.execute(query)
-    return bool(result)
-
-
-async def delete_device(device_id):
-    query = devices.delete().where(devices.c.id == device_id).returning(devices.c.id)
-    return await database.fetch_one(query)
-
-
-# Schedule Section
-async def create_schedule(user_id, device_id, pillname, dose_time, repeat_days=0):
-    query = schedules.insert().values(
-        user_id=user_id,
-        device_id=device_id,
-        pillname=pillname,
-        dose_time=dose_time,
-        repeat_days=repeat_days,
+        .values(status="online", last_seen=datetime.now())
     )
     return await database.execute(query)
 
 
-async def get_schedules(user_id):
+# ---------------------------
+# SCHEDULES
+# ---------------------------
+async def create_schedule_for_user(
+    user_id: UUID,
+    device_id: str,
+    pillname: str,
+    dose_time: datetime,
+    repeat_days: int = 0,
+):
+    query = (
+        schedules.insert()
+        .values(
+            user_id=user_id,
+            device_id=device_id,
+            pillname=pillname,
+            dose_time=dose_time,
+            repeat_days=repeat_days,
+        )
+        .returning(schedules.c.id)
+    )
+    schedule_id = await database.execute(query)
+    return await database.fetch_one(
+        schedules.select().where(schedules.c.id == schedule_id)
+    )
+
+
+# --- Get schedules by user_id ---
+async def get_schedules_by_user(user_id: UUID):
     query = schedules.select().where(schedules.c.user_id == user_id)
     return await database.fetch_all(query)
 
 
-async def get_schedule(schedule_id):
-    query = schedules.select().where(schedules.c.id == schedule_id)
-    return await database.fetch_one(query)
-
-
-async def get_schedule_by_user(schedule_id, user_id):
-    query = schedules.select().where(
-        (schedules.c.id == schedule_id) & (schedules.c.user_id == user_id)
-    )
-    return await database.fetch_one(query)
-
-
-async def update_schedule(schedule_id, pillname, dose_time, repeat_days):
-    query = (
-        schedules.update()
-        .where(schedules.c.id == schedule_id)
-        .values(pillname=pillname, dose_time=dose_time, repeat_days=repeat_days)
-    )
-    return await database.execute(query)
-
-
-async def delete_schedule(schedule_id):
-    query = (
-        schedules.delete()
-        .where(schedules.c.id == schedule_id)
-        .returning(schedules.c.id)
-    )
-    return await database.fetch_one(query)
-
-
-# Medlog Section
-async def create_medlog(user_id, device_id, pillname, status):
-    query = medlogs.insert().values(
-        user_id=user_id,
-        device_id=device_id,
-        pillname=pillname,
-        status=status,
-    )
-    return await database.execute(query)
-
-
-async def get_medlogs(user_id):
-    query = (
-        medlogs.select()
-        .where(medlogs.c.user_id == user_id)
-        .order_by(medlogs.c.taken_at.desc())
-    )
+# --- Get schedules by chip_id (device) ---
+async def get_schedules_by_device(chip_id: str):
+    query = schedules.select().where(schedules.c.device_id == chip_id)
     return await database.fetch_all(query)
 
 
-async def get_medlog_by_user(medlog_id, user_id):
-    query = medlogs.select().where(
-        (medlogs.c.id == medlog_id) & (medlogs.c.user_id == user_id)
+async def update_schedule(schedule_id: UUID, data: dict):
+    query = schedules.update().where(schedules.c.id == schedule_id).values(**data)
+    await database.execute(query)
+    return await get_schedule(schedule_id)
+
+
+async def delete_schedule(schedule_id: UUID):
+    query = schedules.delete().where(schedules.c.id == schedule_id)
+    return await database.execute(query)
+
+
+# ---------------------------
+# MEDLOGS
+# ---------------------------
+
+
+# --- Get medlogs by user_id ---
+async def get_medlogs_by_user(user_id: UUID):
+    query = medlogs.select().where(medlogs.c.user_id == user_id)
+    return await database.fetch_all(query)
+
+
+# --- Create medlog by device (chip_id) ---
+async def create_medlog_by_device(
+    chip_id: str, user_id: UUID, pillname: str, scheduled_time: datetime, status: str
+):
+    query = (
+        medlogs.insert()
+        .values(
+            user_id=user_id,
+            device_id=chip_id,
+            pillname=pillname,
+            scheduled_time=scheduled_time,
+            status=status,
+        )
+        .returning(medlogs.c.id)
     )
+    medlog_id = await database.execute(query)
+    return await database.fetch_one(medlogs.select().where(medlogs.c.id == medlog_id))
+
+
+async def get_medlog(medlog_id: UUID):
+    query = medlogs.select().where(medlogs.c.id == medlog_id)
     return await database.fetch_one(query)
 
 
-async def delete_medlog(medlog_id):
-    query = medlogs.delete().where(medlogs.c.id == medlog_id).returning(medlogs.c.id)
+async def update_medlog(medlog_id: UUID, data: dict):
+    query = medlogs.update().where(medlogs.c.id == medlog_id).values(**data)
+    await database.execute(query)
+    return await get_medlog(medlog_id)
+
+
+async def delete_medlog(medlog_id: UUID):
+    query = medlogs.delete().where(medlogs.c.id == medlog_id)
+    return await database.execute(query)
+
+
+# ---------------------------
+# NOTIFICATIONS
+# ---------------------------
+async def create_notification(device_id: str, user_id: UUID, message: str):
+    query = (
+        notifications.insert()
+        .values(device_id=device_id, user_id=user_id, message=message)
+        .returning(notifications.c.id)
+    )
+    return await database.execute(query)
+
+
+async def get_notification(notification_id: UUID):
+    query = notifications.select().where(notifications.c.id == notification_id)
     return await database.fetch_one(query)
+
+
+async def get_notifications(user_id: UUID = None, device_id: str = None):
+    query = notifications.select()
+    if user_id:
+        query = query.where(notifications.c.user_id == user_id)
+    if device_id:
+        query = query.where(notifications.c.device_id == device_id)
+    return await database.fetch_all(query)
+
+
+async def delete_notification(notification_id: UUID):
+    query = notifications.delete().where(notifications.c.id == notification_id)
+    return await database.execute(query)
+
+
+# ---------------------------
+# ADHERENCE ANALYTICS
+# ---------------------------
 
 
 async def get_adherence_streak(user_id: UUID) -> int:
-    # Get last 30 days of logs (adjust window as needed)
+    """Count consecutive 'taken' doses until first 'missed' in last 30 days."""
     start = datetime.now().date() - timedelta(days=30)
     query = (
         medlogs.select()
-        .where(medlogs.c.user_id == user_id, medlogs.c.schedule_time >= start)
-        .order_by(medlogs.c.schedule_time.desc())
+        .where(medlogs.c.user_id == user_id, medlogs.c.scheduled_time >= start)
+        .order_by(medlogs.c.scheduled_time.desc())
     )
-
     rows = await database.fetch_all(query)
+
     streak = 0
     for row in rows:
         if row["status"] == "taken":
@@ -188,6 +241,7 @@ async def get_adherence_streak(user_id: UUID) -> int:
 
 
 async def get_next_dose(user_id: UUID):
+    """Return the next scheduled dose for a user."""
     query = (
         schedules.select()
         .where(schedules.c.user_id == user_id, schedules.c.dose_time > datetime.now())
@@ -199,6 +253,7 @@ async def get_next_dose(user_id: UUID):
 
 
 async def get_weekly_adherence(user_id: UUID) -> float:
+    """Return adherence percentage for last 7 days."""
     start = datetime.now() - timedelta(days=7)
 
     # Count taken doses
@@ -227,4 +282,4 @@ async def get_weekly_adherence(user_id: UUID) -> float:
 
     total = taken + missed
     adherence = taken / total if total > 0 else 0.0
-    return adherence * 100
+    return adherence

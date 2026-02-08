@@ -1,49 +1,38 @@
-import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from typing import List
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
 from . import crud, schemas
-from .database import database, engine, metadata
-from .models import devices, medlogs, schedules, users
-from .security import (
+from .database import database
+from .models import devices, users
+from .security import (  # implement in auth.py
     create_access_token,
     get_current_user_id,
     hash_password,
     verify_password,
 )
 
-metadata.create_all(engine)
 app = FastAPI(title="SAP API")
 
 
+# Startup event: connect to DB
 @app.on_event("startup")
 async def startup():
     await database.connect()
-    asyncio.create_task(auto_offline_check())
 
 
+# Shutdown event: disconnect from DB
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
 
 
-async def auto_offline_check():
-    while True:
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
-        query = (
-            devices.update()
-            .where(devices.c.last_seen < cutoff)
-            .values(status="offline")
-        )
-        await database.execute(query)
-        await asyncio.sleep(60)  # run every 60 seconds
-
-
+# --- User Register ---
 @app.post("/register")
-async def register(user: schemas.UserIn):
+async def register(user: schemas.UserCreate):
     # Check if email already exists
     existing_user = await database.fetch_one(
         users.select().where(users.c.email == user.email)
@@ -58,13 +47,10 @@ async def register(user: schemas.UserIn):
     query = (
         users.insert()
         .values(
-            name=user.name,
-            email=user.email,
-            password=hashed_pw,
+            name=user.name, email=user.email, password_hash=hashed_pw, role=user.role
         )
         .returning(users.c.id)
     )
-
     user_id = await database.execute(query)
 
     return {
@@ -74,234 +60,256 @@ async def register(user: schemas.UserIn):
     }
 
 
-# --- User Login ---
-@app.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+# JSON login
+@app.post("/login", tags=["auth"])
+async def login_json(credentials: schemas.LoginRequest):
     user = await database.fetch_one(
-        users.select().where(users.c.email == form_data.username)
+        users.select().where(users.c.email == credentials.email)
     )
-    if not user or not verify_password(form_data.password, user["password"]):
+    if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
     token = create_access_token(str(user["id"]))
     return {"access_token": token, "token_type": "bearer"}
 
 
-# --- User Endpoints ---
-@app.get("/users/", response_model=list[schemas.UserOut])
-async def read_users():
+# Form login (for Swagger Authorize button)
+@app.post("/login-form", tags=["auth"])
+async def login_form(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = await database.fetch_one(
+        users.select().where(users.c.email == form_data.username)
+    )
+    if not user or not verify_password(form_data.password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+
+    token = create_access_token(str(user["id"]))
+    return {"access_token": token, "token_type": "bearer"}
+
+
+# ---------------------------
+# USERS (App + Admin)
+# ---------------------------
+@app.get("/users/", response_model=List[schemas.UserRead])
+async def list_users():
     return await crud.get_users()
 
 
-@app.get("/users/{user_id}", response_model=schemas.UserOut)
-async def read_user(user_id: UUID):
+@app.get("/users/{user_id}", response_model=schemas.UserRead)
+async def get_user(user_id: UUID):
     user = await crud.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-@app.put("/users/{user_id}")
-async def update_user(user_id: UUID, user: schemas.UserIn):
-    updated = await crud.update_user(user_id, user.name, user.email, user.password)
-    if not updated:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"message": "User updated successfully", "user": updated}
+@app.put("/users/{user_id}", response_model=schemas.UserRead)
+async def update_user(user_id: UUID, update: schemas.UserUpdate):
+    return await crud.update_user(user_id, update.dict(exclude_unset=True))
 
 
 @app.delete("/users/{user_id}")
 async def delete_user(user_id: UUID):
-    deleted = await crud.delete_user(user_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"message": "User deleted successfully", "user": deleted}
+    await crud.delete_user(user_id)
+    return {"detail": "User deleted"}
 
 
-@app.get("/users/{user_id}/adherence-streak", response_model=schemas.AdherenceStreak)
-async def adherence_streak(user_id: UUID):
+# ---------------------------
+# ADHERENCE SUMMARY (App)
+# ---------------------------
+@app.get("/users/{user_id}/adherence-summary")
+async def adherence_summary(user_id: UUID):
     streak = await crud.get_adherence_streak(user_id)
-    return schemas.AdherenceStreak(streak=streak)
+    next_dose = await crud.get_next_dose(user_id)
+    weekly = await crud.get_weekly_adherence(user_id)
+    return {
+        "user_id": str(user_id),
+        "adherence_streak": streak,
+        "next_dose": next_dose,
+        "weekly_adherence": weekly,
+    }
 
 
-@app.get("/users/{user_id}/next-dose", response_model=schemas.NextDose)
-async def next_dose(user_id: UUID):
-    dose = await crud.get_next_dose(user_id)
-    if not dose:
-        raise HTTPException(status_code=404, detail="No upcoming dose found")
-    return schemas.NextDose(
-        schedule_id=dose["id"], pillname=dose["pillname"], dose_time=dose["dose_time"]
-    )
+# ---------------------------
+# DEVICES (ESP32 + Admin)
+# ---------------------------
+@app.get("/devices/", response_model=List[schemas.DeviceRead])
+async def list_devices():
+    return await crud.get_devices()
 
 
-@app.get("/users/{user_id}/weekly-adherence", response_model=schemas.WeeklyAdherence)
-async def weekly_adherence(user_id: UUID):
-    adherence = await crud.get_weekly_adherence(user_id)
-    return schemas.WeeklyAdherence(adherence=adherence)
-
-
-# --- Device Endpoints ---
-@app.post("/devices/", response_model=schemas.DeviceOut)
-async def create_device(
-    device: schemas.DeviceIn, user_id: UUID = Depends(get_current_user_id)
-):
-    device_id = await crud.create_device(user_id, device.name, device.chip_id)
-    new_device = await database.fetch_one(
-        devices.select().where(devices.c.id == device_id)
-    )
-    return new_device
-
-
-@app.get("/devices/", response_model=list[schemas.DeviceOut])
-async def read_my_devices(user_id: UUID = Depends(get_current_user_id)):
-    return await crud.get_devices(user_id)
-
-
-@app.get("/devices/{device_id}", response_model=schemas.DeviceOut)  # ✅ fixed
-async def read_device(device_id: UUID, user_id: UUID = Depends(get_current_user_id)):
-    device = await crud.get_device_by_user(
-        device_id, user_id
-    )  # ✅ safer ownership check
+@app.get("/devices/{user_id}", response_model=schemas.DeviceRead)
+async def get_device(user_id: UUID):
+    device = await crud.get_devices_by_user(user_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     return device
 
 
-@app.put("/devices/{device_id}", response_model=schemas.DeviceOut)
-async def update_my_device(
-    device_id: UUID,
-    device: schemas.DeviceIn,
-    user_id: UUID = Depends(get_current_user_id),
+@app.post("/devices/", response_model=schemas.DeviceRead)
+async def create_device(device: schemas.DeviceCreate):
+    await crud.create_device(**device.dict())
+    return await crud.get_devices_by_user(device.user_id)
+
+
+@app.put("/devices/{chip_id}", response_model=schemas.DeviceRead)
+async def update_device(chip_id: str, update: schemas.DeviceUpdate):
+    return await crud.update_device(chip_id, update.dict(exclude_unset=True))
+
+
+@app.delete("/devices/{chip_id}")
+async def delete_device(chip_id: str):
+    await crud.delete_device(chip_id)
+    return {"detail": "Device deleted"}
+
+
+@app.post("/devices/{chip_id}/heartbeat")
+async def post_heartbeat(chip_id: str):
+    await crud.heartbeat_device(chip_id)
+    return {"chip_id": chip_id, "status": "online", "last_seen": datetime.now()}
+
+
+# ---------------------------
+# SCHEDULES (App + ESP32 + Admin)
+# ---------------------------
+
+
+# --- GET schedules by user_id (JWT protected) ---
+@app.get("/schedules/{user_id}", response_model=List[schemas.ScheduleRead])
+async def list_schedules_by_user(
+    user_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),  # JWT validation
 ):
-    existing = await crud.get_device_by_user(
-        device_id, user_id
-    )  # ✅ safer ownership check
-    if not existing:
-        raise HTTPException(status_code=404, detail="Device not found")
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view these schedules"
+        )
 
-    await crud.update_device(device_id, device.name, device.chip_id)
-    updated = await crud.get_device(device_id)
-    return updated
-
-
-@app.post("/devices/{chip_id}/heartbeat", response_model=schemas.DeviceOut)
-async def heartbeat(chip_id: str):
-    updated = await crud.update_device_heartbeat(chip_id)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    device = await database.fetch_one(
-        devices.select().where(devices.c.chip_id == chip_id)
-    )
-    if device is None:  # safeguard
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    return schemas.DeviceOut(**dict(device))
+    schedules = await crud.get_schedules_by_user(user_id)
+    if not schedules:
+        raise HTTPException(status_code=404, detail="No schedules found for user")
+    return schedules
 
 
-@app.delete("/devices/{device_id}")
-async def delete_my_device(
-    device_id: UUID, user_id: UUID = Depends(get_current_user_id)
+# --- POST schedule for user_id (JWT protected) ---
+@app.post("/schedules/{user_id}", response_model=schemas.ScheduleRead)
+async def create_schedule_for_user(
+    user_id: UUID,
+    schedule: schemas.ScheduleCreate,
+    current_user_id: str = Depends(get_current_user_id),
 ):
-    existing = await crud.get_device_by_user(
-        device_id, user_id
-    )  # ✅ safer ownership check
-    if not existing:
-        raise HTTPException(status_code=404, detail="Device not found")
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to create schedules for this user"
+        )
 
-    deleted = await crud.delete_device(device_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Device not found")
-    return {"message": "Device deleted successfully", "device_id": deleted}
-
-
-# --- Schedule Endpoints ---
-@app.post("/schedules/", response_model=schemas.ScheduleOut)
-async def create_schedule(
-    schedule: schemas.ScheduleIn, user_id: UUID = Depends(get_current_user_id)
-):
-    schedule_id = await crud.create_schedule(
-        user_id,
-        schedule.device_id,
-        schedule.pillname,
-        schedule.dose_time,
-        schedule.repeat_days,
-    )
-    new_schedule = await database.fetch_one(
-        schedules.select().where(schedules.c.id == schedule_id)
-    )
+    schedule_data = schedule.dict()
+    schedule_data["user_id"] = user_id
+    new_schedule = await crud.create_schedule_for_user(**schedule_data)
     return new_schedule
 
 
-@app.get("/schedules/", response_model=list[schemas.ScheduleOut])
-async def read_my_schedules(user_id: UUID = Depends(get_current_user_id)):
-    return await crud.get_schedules(user_id)
-
-
-@app.put("/schedules/{schedule_id}", response_model=schemas.ScheduleOut)
-async def update_my_schedule(
-    schedule_id: UUID,
-    schedule: schemas.ScheduleIn,
-    user_id: UUID = Depends(get_current_user_id),
+# --- GET schedules by chip_id (API key protected) ---
+@app.get("/schedules/device/{chip_id}", response_model=List[schemas.ScheduleRead])
+async def list_schedules_by_device(
+    chip_id: str,
+    x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
 ):
-    # Ensure the schedule belongs to this user
-    existing = await crud.get_schedule_by_user(schedule_id, user_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Schedule not found")
-
-    await crud.update_schedule(
-        schedule_id, schedule.pillname, schedule.dose_time, schedule.repeat_days
+    # Validate device + API key
+    device = await database.fetch_one(
+        devices.select().where(devices.c.chip_id == chip_id)
     )
-    updated = await crud.get_schedule(schedule_id)
-    return updated
+    if not device or device["api_key"] != x_api_key:
+        raise HTTPException(status_code=401, detail="Invalid device API key")
+
+    schedules = await crud.get_schedules_by_device(chip_id)
+    if not schedules:
+        raise HTTPException(status_code=404, detail="No schedules found for device")
+    return schedules
+
+
+@app.put("/schedules/{schedule_id}", response_model=schemas.ScheduleRead)
+async def update_schedule(schedule_id: UUID, update: schemas.ScheduleUpdate):
+    return await crud.update_schedule(schedule_id, update.dict(exclude_unset=True))
 
 
 @app.delete("/schedules/{schedule_id}")
-async def delete_my_schedule(
-    schedule_id: UUID, user_id: UUID = Depends(get_current_user_id)
+async def delete_schedule(schedule_id: UUID):
+    await crud.delete_schedule(schedule_id)
+    return {"detail": "Schedule deleted"}
+
+
+# ---------------------------
+# MEDLOGS (App + ESP32 + Admin)
+# ---------------------------
+
+
+# --- GET medlogs by user_id (JWT protected) ---
+@app.get("/medlogs/{user_id}", response_model=List[schemas.MedlogRead])
+async def list_medlogs_by_user(
+    user_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),  # JWT validation
 ):
-    # Ensure the schedule belongs to this user
-    existing = await crud.get_schedule_by_user(schedule_id, user_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Schedule not found")
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view these medlogs"
+        )
 
-    deleted = await crud.delete_schedule(schedule_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Schedule not found")
-    return {"message": "Schedule deleted successfully", "schedule_id": deleted}
+    logs = await crud.get_medlogs_by_user(user_id)
+    if not logs:
+        raise HTTPException(status_code=404, detail="No medlogs found for user")
+    return logs
 
 
-# --- Medlog Endpoints ---
-@app.post("/medlogs/", response_model=schemas.MedlogOut)
-async def create_medlog(
-    medlog: schemas.MedlogIn,
-    user_id: UUID = Depends(get_current_user_id),  # automated user_id
+# --- POST medlog by device (API key protected) ---
+@app.post("/medlogs/{chip_id}", response_model=schemas.MedlogRead)
+async def create_medlog_by_device(
+    chip_id: str,
+    medlog: schemas.MedlogCreate,
+    x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
 ):
-    medlog_id = await crud.create_medlog(
-        user_id,
-        medlog.device_id,
-        medlog.pillname,
-        medlog.status,
+    # Validate device + API key
+    device = await database.fetch_one(
+        devices.select().where(devices.c.chip_id == chip_id)
     )
-    new_medlog = await database.fetch_one(
-        medlogs.select().where(medlogs.c.id == medlog_id)
+    if not device or device["api_key"] != x_api_key:
+        raise HTTPException(status_code=401, detail="Invalid device API key")
+
+    new_log = await crud.create_medlog_by_device(
+        chip_id=chip_id,
+        user_id=medlog.user_id,
+        pillname=medlog.pillname,
+        scheduled_time=medlog.scheduled_time,
+        status=medlog.status,
     )
-    return new_medlog
+    return new_log
 
 
-@app.get("/medlogs/", response_model=list[schemas.MedlogOut])
-async def read_my_medlogs(user_id: UUID = Depends(get_current_user_id)):
-    return await crud.get_medlogs(user_id)
+@app.put("/medlogs/{medlog_id}", response_model=schemas.MedlogRead)
+async def update_medlog(medlog_id: UUID, update: schemas.MedlogUpdate):
+    return await crud.update_medlog(medlog_id, update.dict(exclude_unset=True))
 
 
 @app.delete("/medlogs/{medlog_id}")
-async def delete_my_medlog(
-    medlog_id: UUID, user_id: UUID = Depends(get_current_user_id)
-):
-    existing = await crud.get_medlog_by_user(medlog_id, user_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Medlog not found")
+async def delete_medlog(medlog_id: UUID):
+    await crud.delete_medlog(medlog_id)
+    return {"detail": "Medlog deleted"}
 
-    deleted = await crud.delete_medlog(medlog_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Medlog not found")
-    return {"message": "Medlog deleted successfully", "medlog_id": deleted}
+
+# ---------------------------
+# NOTIFICATIONS (App + ESP32)
+# ---------------------------
+@app.get("/notifications/", response_model=List[schemas.NotificationRead])
+async def list_notifications(user_id: UUID = None, device_id: str = None):
+    return await crud.get_notifications(user_id=user_id, device_id=device_id)
+
+
+@app.post("/notifications/", response_model=schemas.NotificationRead)
+async def create_notification(notification: schemas.NotificationCreate):
+    notif_id = await crud.create_notification(**notification.dict())
+    return await crud.get_notification(notif_id)
+
+
+@app.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: UUID):
+    await crud.delete_notification(notification_id)
+    return {"detail": "Notification deleted"}

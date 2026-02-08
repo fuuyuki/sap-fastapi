@@ -1,79 +1,121 @@
-from datetime import datetime, time
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, StringConstraints
 
 
-class UserIn(BaseModel):
-    name: str
-    email: EmailStr
-    password: Annotated[str, StringConstraints(min_length=8)]
-
-
-class UserOut(BaseModel):
-    id: UUID
-    name: str
-    email: EmailStr
-    created_at: datetime
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-class LoginIn(BaseModel):
+class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
 
-class DeviceIn(BaseModel):
+# 1. Users
+class UserBase(BaseModel):
     name: str
-    chip_id: str
+    email: EmailStr
+    role: str = "patient"
 
 
-class DeviceOut(DeviceIn):
+class UserCreate(UserBase):
+    password: Annotated[str, StringConstraints(min_length=8)]
+
+
+class UserRead(UserBase):
     id: UUID
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[str] = None
+    password: Optional[str] = None
+
+
+# 2. Devices
+class DeviceBase(BaseModel):
+    chip_id: str
+    name: str
+    status: str = "offline"
+
+
+class DeviceCreate(DeviceBase):
     user_id: UUID
-    status: str | None = None
-    last_seen: datetime | None = None
+    api_key: str
 
 
-class ScheduleIn(BaseModel):
-    device_id: UUID
+class DeviceRead(DeviceBase):
+    user_id: UUID
+    last_seen: datetime
+    api_key: str
+
+
+class DeviceUpdate(BaseModel):
+    name: Optional[str] = None
+    status: Optional[str] = None
+    api_key: Optional[str] = None
+
+
+# 3. Schedules
+class ScheduleBase(BaseModel):
     pillname: str
-    dose_time: time
+    dose_time: datetime
     repeat_days: int = 0
 
 
-class ScheduleOut(ScheduleIn):
-    id: UUID
-    created_at: datetime
+class ScheduleCreate(ScheduleBase):
+    user_id: UUID
+    device_id: str
 
 
-class MedlogIn(BaseModel):
-    device_id: UUID
-    pillname: str
-    schedule_time: datetime
-    status: str  # must be "taken" or "missed"
-
-
-class MedlogOut(MedlogIn):
+class ScheduleRead(ScheduleBase):
     id: UUID
     user_id: UUID
-    taken_at: datetime
+    device_id: str
 
 
-class AdherenceStreak(BaseModel):
-    streak: int
+class ScheduleUpdate(BaseModel):
+    pillname: Optional[str] = None
+    dose_time: Optional[datetime] = None
+    repeat_days: Optional[int] = None
 
 
-class NextDose(BaseModel):
-    schedule_id: UUID
+# 4. Medlogs
+class MedlogBase(BaseModel):
     pillname: str
-    dose_time: time
+    scheduled_time: datetime
+    status: str  # "taken" or "missed"
 
 
-class WeeklyAdherence(BaseModel):
-    adherence: float  # value between 0.0 and 1.0
+class MedlogCreate(MedlogBase):
+    user_id: UUID
+    device_id: str
+
+
+class MedlogRead(MedlogBase):
+    id: UUID
+    user_id: UUID
+    device_id: str
+
+
+class MedlogUpdate(BaseModel):
+    pillname: Optional[str] = None
+    scheduled_time: Optional[datetime] = None
+    status: Optional[str] = None
+
+
+# 5. Notifications
+class NotificationBase(BaseModel):
+    message: str
+
+
+class NotificationCreate(NotificationBase):
+    device_id: str
+    user_id: UUID
+
+
+class NotificationRead(NotificationBase):
+    id: UUID
+    device_id: str
+    user_id: UUID
+    created_at: datetime
