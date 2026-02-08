@@ -24,7 +24,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: Annotated[str, StringConstraints(min_length=8)]
+    password_hash: Annotated[str, StringConstraints(min_length=8)]
 
 
 class UserRead(UserBase):
@@ -35,7 +35,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[str] = None
-    password: Optional[str] = None
+    password_hash: Optional[str] = None
 
 
 # 2. Devices
