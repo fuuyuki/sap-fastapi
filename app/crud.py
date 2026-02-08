@@ -58,7 +58,6 @@ async def create_device(
             chip_id=chip_id, user_id=user_id, name=name, api_key=api_key, status=status
         )
         .returning(
-            devices.c.id,
             devices.c.chip_id,
             devices.c.user_id,
             devices.c.name,
