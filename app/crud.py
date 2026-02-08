@@ -1,4 +1,4 @@
-import secrets
+# import secrets
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -50,7 +50,7 @@ async def create_device(
     chip_id: str, user_id: UUID, name: str, status: str = "offline"
 ):
     # Generate a secure random API key
-    api_key = secrets.token_hex(32)
+    # api_key = secrets.token_hex(32)
 
     query = (
         devices.insert()
@@ -90,7 +90,7 @@ async def get_devices():
 async def update_device(chip_id: str, data: dict):
     query = devices.update().where(devices.c.chip_id == chip_id).values(**data)
     await database.execute(query)
-    return await get_device(chip_id)
+    return await get_devices_by_device(chip_id)
 
 
 async def delete_device(chip_id: str):

@@ -1,3 +1,5 @@
+import secrets
+
 from sqlalchemy import (
     TIMESTAMP,
     UUID,
@@ -12,6 +14,11 @@ from sqlalchemy import (
 )
 
 metadata = MetaData()
+
+
+def generate_api_key():
+    return secrets.token_hex(32)  # 64‑char secure random hex string
+
 
 # 1. Users
 users = Table(
@@ -43,9 +50,10 @@ devices = Table(
         server_default=func.now(),
         nullable=False,
     ),
-    Column("api_key", String(255), nullable=False),  # for ESP32 authentication
+    Column(
+        "api_key", String(255), nullable=False, unique=True, default=generate_api_key
+    ),  # for ESP32 authentication
 )
-
 # 3. Schedules
 schedules = Table(
     "schedules",
