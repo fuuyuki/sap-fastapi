@@ -132,8 +132,13 @@ async def adherence_summary(user_id: UUID):
 # ---------------------------
 # DEVICES (ESP32 + Admin)
 # ---------------------------
+@app.get("/devices/", response_model=List[schemas.DeviceRead])
+async def list_devices():
+    return await crud.get_devices()
+
+
 @app.get("/devices/{user_id}", response_model=List[schemas.DeviceRead])
-async def list_devices(user_id: UUID):
+async def list_devices_by_user(user_id: UUID):
     devices = await crud.get_devices_by_user(user_id)
     if not devices:
         raise HTTPException(status_code=404, detail="No devices found for this user")

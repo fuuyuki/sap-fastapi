@@ -47,7 +47,6 @@ class DeviceCreate(BaseModel):
 
 
 class DeviceRead(DeviceCreate):
-    id: UUID
     last_seen: datetime
     api_key: str
 
