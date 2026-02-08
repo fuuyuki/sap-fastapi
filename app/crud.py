@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .database import database
 from .models import devices, medlogs, notifications, schedules, users
+from .security import hash_password
 
 
 # ---------------------------
@@ -40,6 +41,15 @@ async def update_user(user_id: UUID, data: dict):
 async def delete_user(user_id: UUID):
     query = users.delete().where(users.c.id == user_id)
     return await database.execute(query)
+
+
+async def update_password(user_id: UUID, new_password: str):
+    # Hash the password using your Argon2 helper
+    hashed_pw = hash_password(new_password)
+
+    query = users.update().where(users.c.id == user_id).values(password=hashed_pw)
+    await database.execute(query)
+    return {"msg": "Password updated successfully"}
 
 
 # ---------------------------
@@ -97,7 +107,7 @@ async def get_devices():
 async def update_device(chip_id: str, data: dict):
     query = devices.update().where(devices.c.chip_id == chip_id).values(**data)
     await database.execute(query)
-    return await get_devices_by_device(chip_id)
+    return await get_device_by_device(chip_id)
 
 
 async def delete_device(chip_id: str):

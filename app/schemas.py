@@ -35,7 +35,10 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[str] = None
-    password_hash: Optional[str] = None
+
+
+class PasswordUpdate(BaseModel):
+    new_password: str
 
 
 # 2. Devices

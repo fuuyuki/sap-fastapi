@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from . import crud, schemas
 from .database import database
 from .models import devices, users
-from .security import (  # implement in auth.py
+from .security import (
     create_access_token,
     get_current_user_id,
     hash_password,
@@ -41,7 +41,7 @@ async def register(user: schemas.UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Hash password securely
-    hashed_pw = hash_password(user.password)
+    hashed_pw = hash_password(user.password_hash)
 
     # Insert and return UUID
     query = (
@@ -113,6 +113,15 @@ async def get_user(user_id: UUID):
 @app.put("/users/{user_id}", response_model=schemas.UserRead)
 async def update_user(user_id: UUID, update: schemas.UserUpdate):
     return await crud.update_user(user_id, update.dict(exclude_unset=True))
+
+
+@app.put("/users/{user_id}/password")
+async def update_user_password(user_id: UUID, payload: schemas.PasswordUpdate):
+    try:
+        result = await crud.update_password(user_id, payload.new_password)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.delete("/users/{user_id}")
