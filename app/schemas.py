@@ -41,7 +41,6 @@ class DeviceBase(BaseModel):
 
 class DeviceCreate(DeviceBase):
     user_id: UUID
-    api_key: str
 
 
 class DeviceRead(DeviceBase):
