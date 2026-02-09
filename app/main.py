@@ -41,7 +41,7 @@ async def auto_offline_check():
             .values(status="offline")
         )
         await database.execute(query)
-        await asyncio.sleep(60)  # run every 60 seconds
+        await asyncio.sleep(10)  # run every 10 seconds
 
 
 # --- User Register ---
