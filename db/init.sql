@@ -45,7 +45,7 @@ CREATE TABLE public.devices (
     user_id uuid NOT NULL,
     name character varying(100) NOT NULL,
     status character varying(50) DEFAULT 'offline'::character varying,
-    last_seen timestamp without time zone DEFAULT now() NOT NULL,
+    last_seen timestamp with time zone DEFAULT now() NOT NULL,
     api_key character varying(255) NOT NULL
 );
 
