@@ -1,4 +1,5 @@
-from datetime import datetime
+import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import UUID
 
@@ -28,6 +29,18 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
+
+
+async def auto_offline_check():
+    while True:
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+        query = (
+            devices.update()
+            .where(devices.c.last_seen < cutoff)
+            .values(status="offline")
+        )
+        await database.execute(query)
+        await asyncio.sleep(60)  # run every 60 seconds
 
 
 # --- User Register ---

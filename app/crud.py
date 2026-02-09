@@ -106,7 +106,7 @@ async def get_devices():
 
 async def update_device(chip_id: str, data: dict):
     query = devices.update().where(devices.c.chip_id == chip_id).values(**data)
-    await database.execute(query)
+    await database.fetch_one(query)
     return await get_device_by_device(chip_id)
 
 
