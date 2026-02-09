@@ -231,10 +231,18 @@ async def post_heartbeat(
     if not device or device["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Invalid device API key")
 
+    try:
+        # Parse ISO8601 string with timezone offset
+        dt = datetime.fromisoformat(payload.last_seen)
+        # Optionally normalize to UTC for consistency
+        utc_dt = dt.astimezone(timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid datetime format")
+
     query = (
         devices.update()
         .where(devices.c.chip_id == chip_id)
-        .values(status="online", last_seen=payload.last_seen)  # <-- use instance
+        .values(status="online", last_seen=utc_dt)  # <-- use instance
     )
     result = await database.execute(query)
     return bool(result)
