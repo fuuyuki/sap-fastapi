@@ -66,6 +66,10 @@ class DeviceUpdate(BaseModel):
     api_key: Optional[str] = None
 
 
+class HeartbeatPayload(BaseModel):
+    last_seen: str
+
+
 # 3. Schedules
 class ScheduleBase(BaseModel):
     pillname: str

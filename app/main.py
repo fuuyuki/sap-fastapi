@@ -208,13 +208,34 @@ async def delete_device(chip_id: str):
     return {"detail": "Device deleted"}
 
 
-@app.post("/devices/{chip_id}/heartbeat")
-async def post_heartbeat(chip_id: str):
+# @app.post("/devices/{chip_id}/heartbeat")
+# async def post_heartbeat(chip_id: str):
+#     await crud.heartbeat_device(chip_id)
+#     return {
+#         "chip_id": chip_id,
+#         "status": "online",
+#         "last_seen": datetime.now(timezone.utc),
+#     }
+
+
+@app.post("/devices/{chip_id}/heartbeat/")
+async def post_heartbeat(
+    chip_id: str,
+    payload: schemas.HeartbeatPayload,
+    x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
+):
+    # Validate device + API key
+    device = await database.fetch_one(
+        devices.select().where(devices.c.chip_id == chip_id)
+    )
+    if not device or device["api_key"] != x_api_key:
+        raise HTTPException(status_code=401, detail="Invalid device API key")
+
     await crud.heartbeat_device(chip_id)
     return {
         "chip_id": chip_id,
         "status": "online",
-        "last_seen": datetime.now(timezone.utc),
+        "last_seen": payload.last_seen,
     }
 
 
