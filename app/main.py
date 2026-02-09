@@ -211,7 +211,11 @@ async def delete_device(chip_id: str):
 @app.post("/devices/{chip_id}/heartbeat")
 async def post_heartbeat(chip_id: str):
     await crud.heartbeat_device(chip_id)
-    return {"chip_id": chip_id, "status": "online", "last_seen": datetime.now()}
+    return {
+        "chip_id": chip_id,
+        "status": "online",
+        "last_seen": datetime.now(timezone.utc),
+    }
 
 
 # ---------------------------

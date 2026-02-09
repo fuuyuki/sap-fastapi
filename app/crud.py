@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import func
@@ -119,7 +119,7 @@ async def heartbeat_device(chip_id: str):
     query = (
         devices.update()
         .where(devices.c.chip_id == chip_id)
-        .values(status="online", last_seen=datetime.now())
+        .values(status="online", last_seen=datetime.now(timezone.utc))
     )
     return await database.execute(query)
 
@@ -272,7 +272,7 @@ async def delete_notification(notification_id: UUID):
 
 async def get_adherence_streak(user_id: UUID) -> int:
     """Count consecutive 'taken' doses until first 'missed' in last 30 days."""
-    start = datetime.now().date() - timedelta(days=30)
+    start = datetime.now(timezone.utc).date() - timedelta(days=30)
     query = (
         medlogs.select()
         .where(medlogs.c.user_id == user_id, medlogs.c.scheduled_time >= start)
@@ -293,7 +293,7 @@ async def get_next_dose(user_id: UUID):
     """Return the next scheduled dose for a user."""
     query = (
         schedules.select()
-        .where(schedules.c.user_id == user_id, schedules.c.dose_time > datetime.now())
+        .where(schedules.c.user_id == user_id, schedules.c.dose_time > datetime.now(timezone.utc)))
         .order_by(schedules.c.dose_time.asc())
         .limit(1)
     )
