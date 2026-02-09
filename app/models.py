@@ -46,7 +46,7 @@ devices = Table(
     Column("status", String(50), default="offline"),
     Column(
         "last_seen",
-        TIMESTAMP(timezone=False),
+        TIMESTAMP(timezone=True),
         server_default=func.now(),
         nullable=False,
     ),
