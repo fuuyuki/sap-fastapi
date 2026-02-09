@@ -293,7 +293,10 @@ async def get_next_dose(user_id: UUID):
     """Return the next scheduled dose for a user."""
     query = (
         schedules.select()
-        .where(schedules.c.user_id == user_id, schedules.c.dose_time > datetime.now(timezone.utc)))
+        .where(
+            schedules.c.user_id == user_id,
+            schedules.c.dose_time > datetime.now(timezone.utc),
+        )
         .order_by(schedules.c.dose_time.asc())
         .limit(1)
     )
