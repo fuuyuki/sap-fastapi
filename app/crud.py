@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from .database import database
 from .models import devices, medlogs, notifications, schedules, users
-from .schemas import HeartbeatPayload
 from .security import hash_password
 
 
@@ -116,13 +115,13 @@ async def delete_device(chip_id: str):
     return await database.execute(query)
 
 
-async def heartbeat_device(chip_id: str):
-    query = (
-        devices.update()
-        .where(devices.c.chip_id == chip_id)
-        .values(status="online", last_seen=HeartbeatPayload.last_seen)
-    )
-    return await database.execute(query)
+# async def heartbeat_device(chip_id: str):
+#     query = (
+#         devices.update()
+#         .where(devices.c.chip_id == chip_id)
+#         .values(status="online", last_seen=datetime.now(timezone.utc))
+#     )
+#     return await database.execute(query)
 
 
 # ---------------------------

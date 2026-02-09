@@ -231,12 +231,13 @@ async def post_heartbeat(
     if not device or device["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Invalid device API key")
 
-    await crud.heartbeat_device(chip_id)
-    return {
-        "chip_id": chip_id,
-        "status": "online",
-        "last_seen": payload.last_seen,
-    }
+    query = (
+        devices.update()
+        .where(devices.c.chip_id == chip_id)
+        .values(status="online", last_seen=payload.last_seen)  # <-- use instance
+    )
+    result = await database.execute(query)
+    return bool(result)
 
 
 # ---------------------------
