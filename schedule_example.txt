@@ -1,0 +1,27 @@
+[
+  {
+    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
+    "pillname": "Isoniazid",
+    "dose_time": "07:00",
+    "repeat_days": 0
+  },
+  {
+    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
+    "pillname": "Rifampicin",
+    "dose_time": "08:00",
+    "repeat_days": 0
+  },
+  {
+    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
+    "pillname": "Pyrazinamide",
+    "dose_time": "12:00",
+    "repeat_days": 0
+  },
+  {
+    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
+    "pillname": "Ethambutol",
+    "dose_time": "18:00",
+    "repeat_days": 0
+  }
+]
+

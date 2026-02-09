@@ -129,7 +129,7 @@ async def heartbeat_device(chip_id: str):
 # ---------------------------
 async def create_schedule_for_user(
     user_id: UUID,
-    chip_id: str,
+    device_id: str,
     pillname: str,
     dose_time: datetime,
     repeat_days: int = 0,
@@ -138,7 +138,7 @@ async def create_schedule_for_user(
         schedules.insert()
         .values(
             user_id=user_id,
-            chip_id=chip_id,
+            device_id=device_id,
             pillname=pillname,
             dose_time=dose_time,
             repeat_days=repeat_days,
@@ -163,8 +163,8 @@ async def get_schedules_by_user(user_id: UUID):
 
 
 # --- Get schedules by chip_id (device) ---
-async def get_schedules_by_device(chip_id: str):
-    query = schedules.select().where(schedules.c.chip_id == chip_id)
+async def get_schedules_by_device(device_id: str):
+    query = schedules.select().where(schedules.c.device_id == device_id)
     return await database.fetch_all(query)
 
 
@@ -192,13 +192,13 @@ async def get_medlogs_by_user(user_id: UUID):
 
 # --- Create medlog by device (chip_id) ---
 async def create_medlog_by_device(
-    chip_id: str, user_id: UUID, pillname: str, scheduled_time: datetime, status: str
+    device_id: str, user_id: UUID, pillname: str, scheduled_time: datetime, status: str
 ):
     query = (
         medlogs.insert()
         .values(
             user_id=user_id,
-            chip_id=chip_id,
+            device_id=device_id,
             pillname=pillname,
             scheduled_time=scheduled_time,
             status=status,
@@ -236,12 +236,12 @@ async def get_notifications_by_user(user_id: UUID):
 
 # --- Create notification by device (chip_id) ---
 async def create_notification_by_device(
-    chip_id: str, user_id: UUID, message: str, created_at: datetime
+    device_id: str, user_id: UUID, message: str, created_at: datetime
 ):
     query = (
         notifications.insert()
         .values(
-            user_id=user_id, chip_id=chip_id, message=message, created_at=created_at
+            user_id=user_id, device_id=device_id, message=message, created_at=created_at
         )
         .returning(notifications.c.id)
     )
@@ -251,12 +251,12 @@ async def create_notification_by_device(
     )
 
 
-async def get_notifications(user_id: UUID = None, chip_id: str = None):
+async def get_notifications(user_id: UUID = None, device_id: str = None):
     query = notifications.select()
     if user_id:
         query = query.where(notifications.c.user_id == user_id)
-    if chip_id:
-        query = query.where(notifications.c.chip_id == chip_id)
+    if device_id:
+        query = query.where(notifications.c.device_id == device_id)
     return await database.fetch_all(query)
 
 
