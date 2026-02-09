@@ -34,7 +34,7 @@ async def shutdown():
 
 async def auto_offline_check():
     while True:
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=15)
         query = (
             devices.update()
             .where(devices.c.last_seen < cutoff)
