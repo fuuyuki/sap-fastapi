@@ -290,18 +290,35 @@ async def get_adherence_streak(user_id: UUID) -> int:
 
 
 async def get_next_dose(user_id: UUID):
-    """Return the next scheduled dose for a user."""
-    query = (
-        schedules.select()
-        .where(
-            schedules.c.user_id == user_id,
-            schedules.c.dose_time > datetime.now(),
-        )
-        .order_by(schedules.c.dose_time.asc())
-        .limit(1)
-    )
-    row = await database.fetch_one(query)
-    return dict(row) if row else None
+    """Return the next scheduled dose for a user (time-of-day only)."""
+    now = datetime.now()
+
+    # Fetch all times-of-day for this user
+    query = schedules.select().where(schedules.c.user_id == user_id)
+    rows = await database.fetch_all(query)
+
+    if not rows:
+        return None
+
+    next_occurrences = []
+    for row in rows:
+        dose_time = row["dose_time"]  # should be a datetime.time object
+        candidate = datetime.combine(now.date(), dose_time)
+
+        # If today's time has already passed, shift to tomorrow
+        if candidate <= now:
+            candidate += timedelta(days=1)
+
+        next_occurrences.append((candidate, row))
+
+    # Pick the earliest candidate
+    next_occurrences.sort(key=lambda x: x[0])
+    next_candidate, row = next_occurrences[0]
+
+    # Return the schedule row plus computed next occurrence
+    result = dict(row)
+    result["next_occurrence"] = next_candidate
+    return result
 
 
 async def get_weekly_adherence(user_id: UUID) -> float:
