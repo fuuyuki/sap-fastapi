@@ -25,3 +25,9 @@
   }
 ]
 
+{
+  "chip_id": "C87BC4286F24",
+  "user_id": "fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6",
+  "name": "SAP02",
+  "status": "offline"
+}
