@@ -152,7 +152,7 @@ COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days)
 --
 
 COPY public.users (id, name, email, password_hash, role) FROM stdin;
-fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	User	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	patient
+fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	string	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	patient
 \.
 
 
