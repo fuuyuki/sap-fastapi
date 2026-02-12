@@ -23,8 +23,11 @@ class UserBase(BaseModel):
     role: str = "patient"
 
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    name: str
+    email: str
     password_hash: Annotated[str, StringConstraints(min_length=8)]
+    role: str = "patient"
 
 
 class UserRead(UserBase):

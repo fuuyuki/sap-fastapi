@@ -61,7 +61,10 @@ async def register(user: schemas.UserCreate):
     query = (
         users.insert()
         .values(
-            name=user.name, email=user.email, password_hash=hashed_pw, role=user.role
+            name=user.name,
+            email=user.email,
+            password_hash=hashed_pw,
+            role=user.role,
         )
         .returning(users.c.id)
     )
@@ -355,7 +358,7 @@ async def create_medlog_by_device(
         raise HTTPException(status_code=401, detail="Invalid device API key")
 
     new_log = await crud.create_medlog_by_device(
-        chip_id=chip_id,
+        device_id=device["chip_id"],
         user_id=medlog.user_id,
         pillname=medlog.pillname,
         scheduled_time=medlog.scheduled_time,
