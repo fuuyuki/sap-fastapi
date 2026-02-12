@@ -295,7 +295,7 @@ async def get_next_dose(user_id: UUID):
         schedules.select()
         .where(
             schedules.c.user_id == user_id,
-            schedules.c.dose_time > datetime.now(timezone.utc),
+            schedules.c.dose_time > datetime.now(),
         )
         .order_by(schedules.c.dose_time.asc())
         .limit(1)
