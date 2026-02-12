@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict gCDgzdhk65mm4z4LcztKhiV9e0hUE222s0UPsZBTBJPlyScGXKUkXdJFRGNlkbt
+\restrict Cf5BkxOSbeXQoDQHij2CGorF0fOdeDwVilNsKfQorGaI6NbwWGit3YapsbL9tOY
 
 -- Dumped from database version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
@@ -61,7 +61,7 @@ CREATE TABLE public.medlogs (
     user_id uuid NOT NULL,
     device_id character varying(100) NOT NULL,
     pillname character varying(100) NOT NULL,
-    scheduled_time timestamp without time zone NOT NULL,
+    scheduled_time time without time zone NOT NULL,
     status character varying(50) NOT NULL
 );
 
@@ -119,7 +119,7 @@ ALTER TABLE public.users OWNER TO fauxpg;
 --
 
 COPY public.devices (chip_id, user_id, name, status, last_seen, api_key) FROM stdin;
-C87BC4286F24    fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6    SAP02   offline \N  7bc8fb1d87efb2b54de66525db07b215eeb71a11a034f1cb7215cda6058caa4d
+C87BC4286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP02	offline	2026-02-12 23:00:32.743838+07	b6d1c1cda37e9e8bd4d3730d8a20f51882c5f97075b2cdc18c683f320a3172bb
 \.
 
 
@@ -144,6 +144,10 @@ COPY public.notifications (id, device_id, user_id, message, created_at) FROM std
 --
 
 COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days) FROM stdin;
+792c92b7-6979-424a-b358-ba8e711e965c	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Isoniazid	07:00:00	127
+4b1d9b1a-a145-4c69-94ca-b4eb36ffb02c	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Rifampicin	08:00:00	127
+3db64e4a-7258-4b1e-a8f7-bc79e122d5ae	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Pyrazinamide	12:00:00	127
+759a1920-afab-4a4f-b7ce-4fd9b2ad0ad5	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Ethambutol	18:00:00	127
 \.
 
 
@@ -152,7 +156,7 @@ COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days)
 --
 
 COPY public.users (id, name, email, password_hash, role) FROM stdin;
-fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	string	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	patient
+fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	User	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	caretaker
 \.
 
 
@@ -264,5 +268,5 @@ ALTER TABLE ONLY public.schedules
 -- PostgreSQL database dump complete
 --
 
-\unrestrict gCDgzdhk65mm4z4LcztKhiV9e0hUE222s0UPsZBTBJPlyScGXKUkXdJFRGNlkbt
+\unrestrict Cf5BkxOSbeXQoDQHij2CGorF0fOdeDwVilNsKfQorGaI6NbwWGit3YapsbL9tOY
 

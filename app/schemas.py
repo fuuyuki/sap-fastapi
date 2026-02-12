@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from typing import Annotated, Optional
 from uuid import UUID
 
@@ -76,7 +76,7 @@ class HeartbeatPayload(BaseModel):
 # 3. Schedules
 class ScheduleBase(BaseModel):
     pillname: str
-    dose_time: datetime
+    dose_time: time
     repeat_days: int = 0
 
 
@@ -100,7 +100,7 @@ class ScheduleUpdate(BaseModel):
 # 4. Medlogs
 class MedlogBase(BaseModel):
     pillname: str
-    scheduled_time: datetime
+    scheduled_time: time
     status: str  # "taken" or "missed"
 
 

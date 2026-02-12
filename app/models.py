@@ -1,6 +1,7 @@
 import secrets
 
 from sqlalchemy import (
+    TIME,
     TIMESTAMP,
     UUID,
     Column,
@@ -67,7 +68,7 @@ schedules = Table(
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), nullable=False),
     Column("device_id", String(100), ForeignKey("devices.chip_id"), nullable=False),
     Column("pillname", String(100), nullable=False),
-    Column("dose_time", TIMESTAMP(timezone=False), nullable=False),
+    Column("dose_time", TIME(timezone=False), nullable=False),
     Column("repeat_days", Integer, default=0),
 )
 
@@ -84,7 +85,7 @@ medlogs = Table(
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), nullable=False),
     Column("device_id", String(100), ForeignKey("devices.chip_id"), nullable=False),
     Column("pillname", String(100), nullable=False),
-    Column("scheduled_time", TIMESTAMP(timezone=False), nullable=False),
+    Column("scheduled_time", TIME(timezone=False), nullable=False),
     Column("status", String(50), nullable=False),  # "taken" or "missed"
 )
 

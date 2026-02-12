@@ -1,27 +1,31 @@
 [
   {
-    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
     "pillname": "Isoniazid",
     "dose_time": "07:00",
-    "repeat_days": 0
+    "repeat_days": 127,
+    "user_id": "fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6",
+    "device_id": "C87BC4286F24"	
   },
   {
-    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
     "pillname": "Rifampicin",
     "dose_time": "08:00",
-    "repeat_days": 0
+    "repeat_days": 127,
+    "user_id": "fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6",
+    "device_id": "C87BC4286F24"
   },
   {
-    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
     "pillname": "Pyrazinamide",
     "dose_time": "12:00",
-    "repeat_days": 0
+    "repeat_days": 127,
+    "user_id": "fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6",
+    "device_id": "C87BC4286F24"
   },
   {
-    "device_id": "68db0e1e-ae60-4656-b23d-d61505b12ab0",
     "pillname": "Ethambutol",
     "dose_time": "18:00",
-    "repeat_days": 0
+    "repeat_days": 127,
+    "user_id": "fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6",
+    "device_id": "C87BC4286F24"
   }
 ]
 
@@ -31,3 +35,6 @@
   "name": "SAP02",
   "status": "offline"
 }
+
+pg_dump -h localhost -p 5432 -U fauxpg sapdb > db/init.sql
+
