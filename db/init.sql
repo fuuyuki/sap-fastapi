@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Cf5BkxOSbeXQoDQHij2CGorF0fOdeDwVilNsKfQorGaI6NbwWGit3YapsbL9tOY
+\restrict YgFe3Oj0paw6efxZihr8DHMBY8dtmKLGATPXlms88rrA0iuqSIv83nHcWR2R2sc
 
 -- Dumped from database version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
@@ -61,7 +61,7 @@ CREATE TABLE public.medlogs (
     user_id uuid NOT NULL,
     device_id character varying(100) NOT NULL,
     pillname character varying(100) NOT NULL,
-    scheduled_time time without time zone NOT NULL,
+    scheduled_time timestamp without time zone DEFAULT now() NOT NULL,
     status character varying(50) NOT NULL
 );
 
@@ -268,5 +268,5 @@ ALTER TABLE ONLY public.schedules
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Cf5BkxOSbeXQoDQHij2CGorF0fOdeDwVilNsKfQorGaI6NbwWGit3YapsbL9tOY
+\unrestrict YgFe3Oj0paw6efxZihr8DHMBY8dtmKLGATPXlms88rrA0iuqSIv83nHcWR2R2sc
 
