@@ -100,7 +100,7 @@ class ScheduleUpdate(BaseModel):
 # 4. Medlogs
 class MedlogBase(BaseModel):
     pillname: str
-    scheduled_time: time
+    scheduled_time: datetime
     status: str  # "taken" or "missed"
 
 

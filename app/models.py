@@ -85,7 +85,7 @@ medlogs = Table(
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), nullable=False),
     Column("device_id", String(100), ForeignKey("devices.chip_id"), nullable=False),
     Column("pillname", String(100), nullable=False),
-    Column("scheduled_time", TIME(timezone=False), nullable=False),
+    Column("scheduled_time", TIMESTAMP(timezone=False), nullable=False),
     Column("status", String(50), nullable=False),  # "taken" or "missed"
 )
 

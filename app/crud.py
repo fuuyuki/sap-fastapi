@@ -270,25 +270,6 @@ async def delete_notification(notification_id: UUID):
 # ---------------------------
 
 
-async def get_adherence_streak(user_id: UUID) -> int:
-    """Count consecutive 'taken' doses until first 'missed' in last 30 days."""
-    start = datetime.now(timezone.utc).date() - timedelta(days=30)
-    query = (
-        medlogs.select()
-        .where(medlogs.c.user_id == user_id, medlogs.c.scheduled_time >= start)
-        .order_by(medlogs.c.scheduled_time.desc())
-    )
-    rows = await database.fetch_all(query)
-
-    streak = 0
-    for row in rows:
-        if row["status"] == "taken":
-            streak += 1
-        else:
-            break
-    return streak
-
-
 async def get_next_dose(user_id: UUID):
     """Return the next scheduled dose for a user (time-of-day only)."""
     now = datetime.now()
