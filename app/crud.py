@@ -270,12 +270,17 @@ async def delete_notification(notification_id: UUID):
 # ---------------------------
 
 
+from datetime import datetime, timedelta
+from uuid import UUID
+
 async def get_next_dose(user_id: UUID):
-    """Return the next scheduled dose for a user (time-of-day only)."""
+    """Return the next scheduled dose time-of-day for a user."""
     now = datetime.now()
 
-    # Fetch all times-of-day for this user
-    query = schedules.select().where(schedules.c.user_id == user_id)
+    # Fetch only dose_time column
+    query = schedules.select().with_only_columns([schedules.c.dose_time]).where(
+        schedules.c.user_id == user_id
+    )
     rows = await database.fetch_all(query)
 
     if not rows:
@@ -290,16 +295,13 @@ async def get_next_dose(user_id: UUID):
         if candidate <= now:
             candidate += timedelta(days=1)
 
-        next_occurrences.append((candidate, row))
+        next_occurrences.append(candidate)
 
     # Pick the earliest candidate
-    next_occurrences.sort(key=lambda x: x[0])
-    next_candidate, row = next_occurrences[0]
+    next_candidate = min(next_occurrences)
 
-    # Return the schedule row plus computed next occurrence
-    result = dict(row)
-    result["next_occurrence"] = next_candidate
-    return result
+    return {"next_dose": next_candidate}
+
 
 
 async def get_weekly_adherence(user_id: UUID) -> float:
