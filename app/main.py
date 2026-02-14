@@ -174,20 +174,13 @@ async def list_devices():
     return await crud.get_devices()
 
 
-@app.get("/devices/{user_id}", response_model=schemas.DeviceRead)
-async def get_device_by_user(user_id: UUID):
-    devices = await crud.get_device_by_user(user_id)
-    if not devices:
-        raise HTTPException(status_code=404, detail="No devices found for this user")
-    return devices
-
-
-@app.get("/devices/{chip_id}", response_model=schemas.DeviceRead)
-async def get_device_by_device(chip_id: str):
-    device = await crud.get_device_by_device(chip_id)
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-    return device
+@app.get("/devices", response_model=schemas.DeviceRead)
+async def get_device(user_id: UUID | None = None, chip_id: str | None = None):
+    if user_id:
+        return await crud.get_device_by_user(user_id)
+    if chip_id:
+        return await crud.get_device_by_device(chip_id)
+    raise HTTPException(status_code=400, detail="Must provide user_id or chip_id")
 
 
 @app.post("/devices/", response_model=schemas.DeviceRead)

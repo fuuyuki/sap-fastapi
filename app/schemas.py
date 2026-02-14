@@ -51,14 +51,24 @@ class DeviceBase(BaseModel):
     status: str = "offline"
 
 
+# --- For creating devices ---
 class DeviceCreate(BaseModel):
     chip_id: str
-    user_id: UUID
+    user_id: UUID  # link to a user
     name: str
     status: str = "offline"
 
 
-class DeviceRead(DeviceCreate):
+# class DeviceRead(DeviceCreate):
+#     last_seen: datetime
+#     api_key: str
+
+
+class DeviceRead(BaseModel):
+    chip_id: str
+    user_id: UUID  # validated as UUID
+    name: str
+    status: str
     last_seen: datetime
     api_key: str
 
