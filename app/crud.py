@@ -239,13 +239,11 @@ async def get_notifications_by_user(user_id: UUID):
 
 # --- Create notification by device (chip_id) ---
 async def create_notification_by_device(
-    device_id: str, user_id: UUID, message: str, created_at: datetime
+    device_id: str, message: str, created_at: datetime
 ):
     query = (
         notifications.insert()
-        .values(
-            user_id=user_id, device_id=device_id, message=message, created_at=created_at
-        )
+        .values(device_id=device_id, message=message, created_at=created_at)
         .returning(notifications.c.id)
     )
     notif_id = await database.execute(query)
