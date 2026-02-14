@@ -324,10 +324,8 @@ async def get_next_dose(user_id: UUID):
 
 
 async def get_weekly_adherence(user_id: UUID) -> float:
-    """Return adherence percentage for last 7 days."""
-    start = datetime.now(wib) - timedelta(days=7)
+    start = datetime.now(wib).replace(tzinfo=None) - timedelta(days=7)
 
-    # Count taken doses
     taken_query = (
         medlogs.select()
         .with_only_columns(func.count())
@@ -339,7 +337,6 @@ async def get_weekly_adherence(user_id: UUID) -> float:
     )
     taken = await database.fetch_val(taken_query)
 
-    # Count missed doses
     missed_query = (
         medlogs.select()
         .with_only_columns(func.count())
@@ -352,5 +349,4 @@ async def get_weekly_adherence(user_id: UUID) -> float:
     missed = await database.fetch_val(missed_query)
 
     total = taken + missed
-    adherence = taken / total if total > 0 else 0.0
-    return adherence
+    return taken / total if total > 0 else 0.0
