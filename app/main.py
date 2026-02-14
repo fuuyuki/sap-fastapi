@@ -419,9 +419,7 @@ async def create_notification_by_device(
 
     new_notif = await crud.create_notification_by_device(
         device_id=device_id,
-        user_id=notif.user_id,
         message=notif.message,
-        created_at=notif.created_at,
     )
     return new_notif
 
