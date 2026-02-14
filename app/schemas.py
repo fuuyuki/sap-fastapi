@@ -128,6 +128,8 @@ class NotificationBase(BaseModel):
 
 class NotificationCreate(NotificationBase):
     device_id: str
+    user_id: UUID
+    created_at: datetime
 
 
 class NotificationRead(NotificationBase):
