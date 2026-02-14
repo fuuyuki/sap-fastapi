@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict YgFe3Oj0paw6efxZihr8DHMBY8dtmKLGATPXlms88rrA0iuqSIv83nHcWR2R2sc
+\restrict Vj09vUi8DQpaGQAapFwPNPJg23vPpeHSo6gEUDT2ecNFCFV4huIBULdvUqLLwxn
 
 -- Dumped from database version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
@@ -77,7 +77,7 @@ CREATE TABLE public.notifications (
     device_id character varying(100) NOT NULL,
     user_id uuid NOT NULL,
     message character varying(255) NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -268,5 +268,5 @@ ALTER TABLE ONLY public.schedules
 -- PostgreSQL database dump complete
 --
 
-\unrestrict YgFe3Oj0paw6efxZihr8DHMBY8dtmKLGATPXlms88rrA0iuqSIv83nHcWR2R2sc
+\unrestrict Vj09vUi8DQpaGQAapFwPNPJg23vPpeHSo6gEUDT2ecNFCFV4huIBULdvUqLLwxn
 
