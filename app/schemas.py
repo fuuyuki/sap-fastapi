@@ -103,7 +103,7 @@ class ScheduleRead(ScheduleBase):
 
 class ScheduleUpdate(BaseModel):
     pillname: Optional[str] = None
-    dose_time: Optional[datetime] = None
+    dose_time: Optional[time] = None
     repeat_days: Optional[int] = None
 
 
