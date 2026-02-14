@@ -6,10 +6,11 @@ from uuid import UUID
 import pytz
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import scalar_one_or_none, select
 
 from . import crud, schemas
 from .database import database
-from .models import devices, users
+from .models import devices, notifications, users
 from .security import (
     create_access_token,
     get_current_user_id,
@@ -377,6 +378,21 @@ async def delete_medlog(medlog_id: UUID):
 # ---------------------------
 # NOTIFICATIONS (App + ESP32)
 # ---------------------------
+@app.get("/notifications/{user_id}/latest", response_model=schemas.NotificationRead)
+async def get_latest_notification_by_user(
+    user_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    # Authorization check
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view these notifications"
+        )
+
+    notif = await crud.get_latest_notification(user_id=user_id)
+    if not notif:
+        raise HTTPException(status_code=404, detail="No notifications found for user")
+    return notif
 
 
 # --- GET notifications by user_id (JWT protected) ---

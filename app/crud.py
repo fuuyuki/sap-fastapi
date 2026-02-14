@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytz
-from sqlalchemy import func
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from .database import database
@@ -252,6 +252,19 @@ async def create_notification_by_device(
     return await database.fetch_one(
         notifications.select().where(notifications.c.id == notif_id)
     )
+
+
+async def get_latest_notification(user_id: UUID = None, device_id: str = None):
+    query = notifications.select()
+    if user_id:
+        query = query.where(notifications.c.user_id == user_id)
+    if device_id:
+        query = query.where(notifications.c.device_id == device_id)
+
+    # Order by created_at descending and limit to 1
+    query = query.order_by(desc(notifications.c.created_at)).limit(1)
+
+    return await database.fetch_one(query)
 
 
 async def get_notifications(user_id: UUID = None, device_id: str = None):
