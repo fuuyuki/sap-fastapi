@@ -6,7 +6,7 @@ from uuid import UUID
 import pytz
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import scalar_one_or_none, select
+from sqlalchemy import select
 
 from . import crud, schemas
 from .database import database
