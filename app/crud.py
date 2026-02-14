@@ -320,7 +320,7 @@ async def get_next_dose(user_id: UUID):
     # Pick the earliest candidate
     next_candidate = min(next_occurrences)
 
-    return {"next_dose_time": next_candidate.strftime("%H:%M")}
+    return {"next_dose": next_candidate.strftime("%H:%M")}
     # return {"next_dose": next_candidate}
 
 
