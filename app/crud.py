@@ -1,13 +1,16 @@
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from uuid import UUID
 
+import pytz
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .database import database
 from .models import devices, medlogs, notifications, schedules, users
 from .security import hash_password
+
+wib = pytz.timezone("Asia/Jakarta")
 
 
 # ---------------------------
@@ -70,7 +73,7 @@ async def create_device(
             user_id=user_id,
             name=name,
             api_key=api_key,
-            last_seen=datetime.now(),
+            last_seen=datetime.now(wib),
             status=status,
         )
         .returning(
@@ -270,7 +273,7 @@ async def delete_notification(notification_id: UUID):
 # ---------------------------
 async def get_adherence_streak(user_id: UUID) -> int:
     """Count consecutive 'taken' doses until first 'missed' in last 30 days."""
-    start = datetime.now(timezone.utc).date() - timedelta(days=30)
+    start = datetime.now(wib).date() - timedelta(days=30)
     query = (
         medlogs.select()
         .where(medlogs.c.user_id == user_id, medlogs.c.scheduled_time >= start)
@@ -289,7 +292,7 @@ async def get_adherence_streak(user_id: UUID) -> int:
 
 async def get_next_dose(user_id: UUID):
     """Return the next scheduled dose time-of-day for a user."""
-    now = datetime.now()
+    now = datetime.now(wib)
 
     # Fetch only dose_time column
     query = (
@@ -321,7 +324,7 @@ async def get_next_dose(user_id: UUID):
 
 async def get_weekly_adherence(user_id: UUID) -> float:
     """Return adherence percentage for last 7 days."""
-    start = datetime.now() - timedelta(days=7)
+    start = datetime.now(wib) - timedelta(days=7)
 
     # Count taken doses
     taken_query = (

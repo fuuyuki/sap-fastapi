@@ -1,8 +1,9 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import List
 from uuid import UUID
 
+import pytz
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -15,6 +16,8 @@ from .security import (
     hash_password,
     verify_password,
 )
+
+wib = pytz.timezone("Asia/Jakarta")
 
 app = FastAPI(title="SAP API")
 
@@ -34,7 +37,7 @@ async def shutdown():
 
 async def auto_offline_check():
     while True:
-        cutoff = datetime.now(timezone.utc) - timedelta(seconds=15)
+        cutoff = datetime.now(wib) - timedelta(seconds=15)
         query = (
             devices.update()
             .where(devices.c.last_seen < cutoff)
