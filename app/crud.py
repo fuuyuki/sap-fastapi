@@ -309,6 +309,7 @@ async def get_next_dose(user_id: UUID):
     for row in rows:
         dose_time = row["dose_time"]  # should be a datetime.time object
         candidate = datetime.combine(now.date(), dose_time)
+        candidate = wib.localize(candidate)  # make aware in WIB
 
         # If today's time has already passed, shift to tomorrow
         if candidate <= now:
