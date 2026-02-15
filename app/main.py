@@ -408,20 +408,42 @@ async def create_notification_by_device(
     if not device or device["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Invalid device API key")
 
-    # Store notification
+    # Store notification (ESP32 posts at correct time)
     new_notif = await crud.create_notification_by_device(
         database,
         device_id=device_id,
         user_id=notif.user_id,
         message=notif.message,
+        created_at=notif.created_at,
     )
 
-    # Immediately send push
+    # Immediately send push to all tokens for this user
     tokens = await crud.get_device_tokens(database, notif.user_id)
     for token in tokens:
         firebase_client.send_push(token, "Medication Reminder", notif.message)
 
     return new_notif
+
+
+# --- Register or update Android FCM token ---
+@app.post("/register_token")
+async def register_token(payload: schemas.TokenRegisterRequest):
+    # Upsert logic: if token already exists for user, update it
+    existing = await database.fetch_one(
+        device_tokens.select().where(
+            (device_tokens.c.user_id == payload.user_id)
+            & (device_tokens.c.token == payload.token)
+        )
+    )
+    if existing:
+        # Already registered
+        return {"message": "Token already registered"}
+
+    # Insert new token
+    query = device_tokens.insert().values(user_id=payload.user_id, token=payload.token)
+    await database.execute(query)
+
+    return {"message": "Token registered successfully"}
 
 
 # # --- POST notification by device_id (API key protected) ---
@@ -451,12 +473,3 @@ async def create_notification_by_device(
 async def delete_notification(notification_id: UUID):
     await crud.delete_notification(notification_id)
     return {"detail": "Notification deleted"}
-
-
-@app.post("/register_token")
-async def register_token(payload: schemas.TokenRegisterRequest):
-    # Insert into device_tokens table
-    query = device_tokens.insert().values(user_id=payload.user_id, token=payload.token)
-    await database.execute(query)
-
-    return {"message": "Token registered successfully"}

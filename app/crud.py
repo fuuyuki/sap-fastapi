@@ -2,12 +2,11 @@ import secrets
 from datetime import datetime, timedelta
 from uuid import UUID
 
-import firebase_admin
 import pytz
-from firebase_admin import messaging
 from sqlalchemy import desc, func
 
 from .database import database
+from .firebase_client import send_push
 from .models import device_tokens, devices, medlogs, notifications, schedules, users
 from .security import hash_password
 
@@ -324,10 +323,10 @@ async def get_notifications_by_user(user_id: UUID):
 
 
 async def create_notification_by_device(
-    database, device_id: str, user_id: UUID, message: str
+    database, device_id: str, user_id: UUID, message: str, created_at: datetime
 ):
     query = notifications.insert().values(
-        device_id=device_id, user_id=user_id, message=message
+        device_id=device_id, user_id=user_id, message=message, created_at=created_at
     )
     notif_id = await database.execute(query)
     return await database.fetch_one(
@@ -339,27 +338,6 @@ async def get_device_tokens(database, user_id: UUID):
     query = device_tokens.select().where(device_tokens.c.user_id == user_id)
     rows = await database.fetch_all(query)
     return [row["token"] for row in rows]
-
-
-# # --- Create notification by device (chip_id) ---
-# async def create_notification_by_device(
-#     device_id: str, user_id: UUID, message: str, created_at: datetime
-# ):
-#     query = (
-#         notifications.insert()
-#         .values(
-#             user_id=user_id, device_id=device_id, message=message, created_at=created_at
-#         )
-#         .returning(notifications.c.id)
-#     )
-#     notif_id = await database.execute(query)
-
-#     # After storing, trigger FCM push
-#     await send_push_notification(user_id, message)
-
-#     return await database.fetch_one(
-#         notifications.select().where(notifications.c.id == notif_id)
-#     )
 
 
 async def get_latest_notification(user_id: UUID, device_id: str):
