@@ -109,3 +109,12 @@ notifications = Table(
         nullable=False,
     ),
 )
+
+device_tokens = Table(
+    "device_tokens",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), nullable=False),
+    Column("token", String, nullable=False),
+    Column("created_at", TIMESTAMP(timezone=False), server_default=func.now()),
+)

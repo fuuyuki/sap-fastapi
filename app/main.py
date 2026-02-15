@@ -6,11 +6,10 @@ from uuid import UUID
 import pytz
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
 
-from . import crud, schemas
+from . import crud, firebase_client, schemas
 from .database import database
-from .models import devices, notifications, users
+from .models import device_tokens, devices, users
 from .security import (
     create_access_token,
     get_current_user_id,
@@ -378,23 +377,6 @@ async def delete_medlog(medlog_id: UUID):
 # ---------------------------
 # NOTIFICATIONS (App + ESP32)
 # ---------------------------
-@app.get("/notifications/{user_id}/latest", response_model=schemas.NotificationRead)
-async def get_latest_notification_by_user(
-    user_id: UUID,
-    current_user_id: str = Depends(get_current_user_id),
-):
-    # Authorization check
-    if str(user_id) != current_user_id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to view these notifications"
-        )
-
-    notif = await crud.get_latest_notification(user_id=user_id)
-    if not notif:
-        raise HTTPException(status_code=404, detail="No notifications found for user")
-    return notif
-
-
 # --- GET notifications by user_id (JWT protected) ---
 @app.get("/notifications/{user_id}", response_model=List[schemas.NotificationRead])
 async def list_notifications_by_user(
@@ -417,7 +399,7 @@ async def list_notifications_by_user(
 async def create_notification_by_device(
     device_id: str,
     notif: schemas.NotificationCreate,
-    x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
+    x_api_key: str = Header(..., alias="X-API-Key"),
 ):
     # Validate device + API key
     device = await database.fetch_one(
@@ -426,16 +408,55 @@ async def create_notification_by_device(
     if not device or device["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Invalid device API key")
 
+    # Store notification
     new_notif = await crud.create_notification_by_device(
+        database,
         device_id=device_id,
         user_id=notif.user_id,
         message=notif.message,
-        created_at=notif.created_at,
     )
+
+    # Immediately send push
+    tokens = await crud.get_device_tokens(database, notif.user_id)
+    for token in tokens:
+        firebase_client.send_push(token, "Medication Reminder", notif.message)
+
     return new_notif
+
+
+# # --- POST notification by device_id (API key protected) ---
+# @app.post("/notifications/{device_id}", response_model=schemas.NotificationRead)
+# async def create_notification_by_device(
+#     device_id: str,
+#     notif: schemas.NotificationCreate,
+#     x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
+# ):
+#     # Validate device + API key
+#     device = await database.fetch_one(
+#         devices.select().where(devices.c.chip_id == device_id)
+#     )
+#     if not device or device["api_key"] != x_api_key:
+#         raise HTTPException(status_code=401, detail="Invalid device API key")
+
+#     new_notif = await crud.create_notification_by_device(
+#         device_id=device_id,
+#         user_id=notif.user_id,
+#         message=notif.message,
+#         created_at=notif.created_at,
+#     )
+#     return new_notif
 
 
 @app.delete("/notifications/{notification_id}")
 async def delete_notification(notification_id: UUID):
     await crud.delete_notification(notification_id)
     return {"detail": "Notification deleted"}
+
+
+@app.post("/register_token")
+async def register_token(payload: schemas.TokenRegisterRequest):
+    # Insert into device_tokens table
+    query = device_tokens.insert().values(user_id=payload.user_id, token=payload.token)
+    await database.execute(query)
+
+    return {"message": "Token registered successfully"}

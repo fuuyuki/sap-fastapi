@@ -147,3 +147,9 @@ class NotificationRead(NotificationBase):
     device_id: str
     user_id: UUID
     created_at: datetime
+
+
+# Pydantic schema for request body
+class TokenRegisterRequest(BaseModel):
+    user_id: UUID
+    token: str
