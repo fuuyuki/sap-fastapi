@@ -57,6 +57,91 @@ async def update_password(user_id: UUID, new_password: str):
 
 
 # ---------------------------
+# ADHERENCE ANALYTICS
+# ---------------------------
+async def get_adherence_streak(user_id: UUID) -> int:
+    """Count consecutive 'taken' doses until first 'missed' in last 30 days."""
+    start = datetime.now(wib).date() - timedelta(days=30)
+    query = (
+        medlogs.select()
+        .where(medlogs.c.user_id == user_id, medlogs.c.scheduled_time >= start)
+        .order_by(medlogs.c.scheduled_time.desc())
+    )
+    rows = await database.fetch_all(query)
+
+    streak = 0
+    for row in rows:
+        if row["status"] == "taken":
+            streak += 1
+        else:
+            break
+    return streak
+
+
+async def get_next_dose(user_id: UUID):
+    """Return the next scheduled dose time-of-day for a user."""
+    now = datetime.now(wib)
+
+    # Fetch only dose_time column
+    query = (
+        schedules.select()
+        .with_only_columns(schedules.c.dose_time)
+        .where(schedules.c.user_id == user_id)
+    )
+    rows = await database.fetch_all(query)
+
+    if not rows:
+        return None
+
+    next_occurrences = []
+    for row in rows:
+        dose_time = row["dose_time"]  # should be a datetime.time object
+        candidate = datetime.combine(now.date(), dose_time)
+        candidate = wib.localize(candidate)  # make aware in WIB
+
+        # If today's time has already passed, shift to tomorrow
+        if candidate <= now:
+            candidate += timedelta(days=1)
+
+        next_occurrences.append(candidate)
+
+    # Pick the earliest candidate
+    next_candidate = min(next_occurrences)
+
+    return {"next_dose": next_candidate.strftime("%H:%M")}
+    # return {"next_dose": next_candidate}
+
+
+async def get_weekly_adherence(user_id: UUID) -> float:
+    start = datetime.now(wib).replace(tzinfo=None) - timedelta(days=7)
+
+    taken_query = (
+        medlogs.select()
+        .with_only_columns(func.count())
+        .where(
+            medlogs.c.user_id == user_id,
+            medlogs.c.status == "taken",
+            medlogs.c.scheduled_time >= start,
+        )
+    )
+    taken = await database.fetch_val(taken_query)
+
+    missed_query = (
+        medlogs.select()
+        .with_only_columns(func.count())
+        .where(
+            medlogs.c.user_id == user_id,
+            medlogs.c.status == "missed",
+            medlogs.c.scheduled_time >= start,
+        )
+    )
+    missed = await database.fetch_val(missed_query)
+
+    total = taken + missed
+    return taken / total if total > 0 else 0.0
+
+
+# ---------------------------
 # DEVICES
 # ---------------------------
 
@@ -242,10 +327,7 @@ async def create_notification_by_device(
     database, device_id: str, user_id: UUID, message: str
 ):
     query = notifications.insert().values(
-        device_id=device_id,
-        user_id=user_id,
-        message=message,
-        status="delivered",
+        device_id=device_id, user_id=user_id, message=message
     )
     notif_id = await database.execute(query)
     return await database.fetch_one(
@@ -305,88 +387,3 @@ async def get_notifications(user_id: UUID, device_id: str):
 async def delete_notification(notification_id: UUID):
     query = notifications.delete().where(notifications.c.id == notification_id)
     return await database.execute(query)
-
-
-# ---------------------------
-# ADHERENCE ANALYTICS
-# ---------------------------
-async def get_adherence_streak(user_id: UUID) -> int:
-    """Count consecutive 'taken' doses until first 'missed' in last 30 days."""
-    start = datetime.now(wib).date() - timedelta(days=30)
-    query = (
-        medlogs.select()
-        .where(medlogs.c.user_id == user_id, medlogs.c.scheduled_time >= start)
-        .order_by(medlogs.c.scheduled_time.desc())
-    )
-    rows = await database.fetch_all(query)
-
-    streak = 0
-    for row in rows:
-        if row["status"] == "taken":
-            streak += 1
-        else:
-            break
-    return streak
-
-
-async def get_next_dose(user_id: UUID):
-    """Return the next scheduled dose time-of-day for a user."""
-    now = datetime.now(wib)
-
-    # Fetch only dose_time column
-    query = (
-        schedules.select()
-        .with_only_columns(schedules.c.dose_time)
-        .where(schedules.c.user_id == user_id)
-    )
-    rows = await database.fetch_all(query)
-
-    if not rows:
-        return None
-
-    next_occurrences = []
-    for row in rows:
-        dose_time = row["dose_time"]  # should be a datetime.time object
-        candidate = datetime.combine(now.date(), dose_time)
-        candidate = wib.localize(candidate)  # make aware in WIB
-
-        # If today's time has already passed, shift to tomorrow
-        if candidate <= now:
-            candidate += timedelta(days=1)
-
-        next_occurrences.append(candidate)
-
-    # Pick the earliest candidate
-    next_candidate = min(next_occurrences)
-
-    return {"next_dose": next_candidate.strftime("%H:%M")}
-    # return {"next_dose": next_candidate}
-
-
-async def get_weekly_adherence(user_id: UUID) -> float:
-    start = datetime.now(wib).replace(tzinfo=None) - timedelta(days=7)
-
-    taken_query = (
-        medlogs.select()
-        .with_only_columns(func.count())
-        .where(
-            medlogs.c.user_id == user_id,
-            medlogs.c.status == "taken",
-            medlogs.c.scheduled_time >= start,
-        )
-    )
-    taken = await database.fetch_val(taken_query)
-
-    missed_query = (
-        medlogs.select()
-        .with_only_columns(func.count())
-        .where(
-            medlogs.c.user_id == user_id,
-            medlogs.c.status == "missed",
-            medlogs.c.scheduled_time >= start,
-        )
-    )
-    missed = await database.fetch_val(missed_query)
-
-    total = taken + missed
-    return taken / total if total > 0 else 0.0
