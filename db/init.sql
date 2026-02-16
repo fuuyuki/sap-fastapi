@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Vj09vUi8DQpaGQAapFwPNPJg23vPpeHSo6gEUDT2ecNFCFV4huIBULdvUqLLwxn
+\restrict 5nXyMXxN9Z9Xv4c879FZSh89uSIgqHgO0fKvZPM2UtyrSkTHAivpDaUYW7ocgwy
 
 -- Dumped from database version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
@@ -35,6 +35,42 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: device_tokens; Type: TABLE; Schema: public; Owner: fauxpg
+--
+
+CREATE TABLE public.device_tokens (
+    id integer NOT NULL,
+    user_id uuid,
+    token text NOT NULL,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.device_tokens OWNER TO fauxpg;
+
+--
+-- Name: device_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: fauxpg
+--
+
+CREATE SEQUENCE public.device_tokens_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.device_tokens_id_seq OWNER TO fauxpg;
+
+--
+-- Name: device_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fauxpg
+--
+
+ALTER SEQUENCE public.device_tokens_id_seq OWNED BY public.device_tokens.id;
+
 
 --
 -- Name: devices; Type: TABLE; Schema: public; Owner: fauxpg
@@ -115,6 +151,21 @@ CREATE TABLE public.users (
 ALTER TABLE public.users OWNER TO fauxpg;
 
 --
+-- Name: device_tokens id; Type: DEFAULT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.device_tokens ALTER COLUMN id SET DEFAULT nextval('public.device_tokens_id_seq'::regclass);
+
+
+--
+-- Data for Name: device_tokens; Type: TABLE DATA; Schema: public; Owner: fauxpg
+--
+
+COPY public.device_tokens (id, user_id, token, created_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: devices; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
@@ -158,6 +209,21 @@ COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days)
 COPY public.users (id, name, email, password_hash, role) FROM stdin;
 fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	User	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	caretaker
 \.
+
+
+--
+-- Name: device_tokens_id_seq; Type: SEQUENCE SET; Schema: public; Owner: fauxpg
+--
+
+SELECT pg_catalog.setval('public.device_tokens_id_seq', 1, false);
+
+
+--
+-- Name: device_tokens device_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.device_tokens
+    ADD CONSTRAINT device_tokens_pkey PRIMARY KEY (id);
 
 
 --
@@ -206,6 +272,14 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: device_tokens device_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.device_tokens
+    ADD CONSTRAINT device_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -268,5 +342,5 @@ ALTER TABLE ONLY public.schedules
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Vj09vUi8DQpaGQAapFwPNPJg23vPpeHSo6gEUDT2ecNFCFV4huIBULdvUqLLwxn
+\unrestrict 5nXyMXxN9Z9Xv4c879FZSh89uSIgqHgO0fKvZPM2UtyrSkTHAivpDaUYW7ocgwy
 
