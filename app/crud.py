@@ -334,10 +334,16 @@ async def create_notification_by_device(
     )
 
 
-async def get_device_tokens(database, user_id: UUID):
+async def get_device_tokens_by_user(database, user_id: UUID):
     query = device_tokens.select().where(device_tokens.c.user_id == user_id)
     rows = await database.fetch_all(query)
     return [row["token"] for row in rows]
+
+
+async def get_all_device_tokens(database):
+    query = device_tokens.select()
+    rows = await database.fetch_all(query)
+    return rows
 
 
 async def get_latest_notification(user_id: UUID, device_id: str):
@@ -351,6 +357,12 @@ async def get_latest_notification(user_id: UUID, device_id: str):
     query = query.order_by(desc(notifications.c.created_at)).limit(1)
 
     return await database.fetch_one(query)
+
+
+async def delete_device_token(database, token_id: int):
+    query = device_tokens.delete().where(device_tokens.c.id == token_id)
+    result = await database.execute(query)
+    return result
 
 
 async def get_notifications(user_id: UUID, device_id: str):

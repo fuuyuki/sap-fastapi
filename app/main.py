@@ -418,7 +418,7 @@ async def create_notification_by_device(
     )
 
     # Immediately send push to all tokens for this user
-    tokens = await crud.get_device_tokens(database, notif.user_id)
+    tokens = await crud.get_device_tokens_by_user(database, notif.user_id)
     for token in tokens:
         firebase_client.send_push(token, "Medication Reminder", notif.message)
 
@@ -444,6 +444,29 @@ async def register_token(payload: schemas.TokenRegisterRequest):
     await database.execute(query)
 
     return {"message": "Token registered successfully"}
+
+
+# --- List all device tokens ---
+@app.get("/device_tokens/", response_model=list[schemas.DeviceTokenRead])
+async def list_device_tokens():
+    tokens = await crud.get_all_device_tokens(database)
+    return tokens
+
+
+# --- List device tokens for a specific user ---
+@app.get("/device_tokens/{user_id}", response_model=list[schemas.DeviceTokenRead])
+async def list_device_tokens_by_user(user_id: UUID):
+    tokens = await crud.get_device_tokens_by_user(database, user_id)
+    return tokens
+
+
+# --- Delete a device token by ID ---
+@app.delete("/device_tokens/{token_id}", response_model=schemas.DeleteResponse)
+async def delete_device_token(token_id: int):
+    result = await crud.delete_device_token(database, token_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Token not found")
+    return {"message": f"Token {token_id} deleted successfully"}
 
 
 # # --- POST notification by device_id (API key protected) ---

@@ -153,3 +153,14 @@ class NotificationRead(NotificationBase):
 class TokenRegisterRequest(BaseModel):
     user_id: UUID
     token: str
+
+
+class DeviceTokenRead(BaseModel):
+    id: int
+    user_id: UUID
+    token: str
+    created_at: datetime
+
+
+class DeleteResponse(BaseModel):
+    message: str
