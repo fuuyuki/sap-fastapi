@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from . import crud, firebase_client, schemas
 from .database import database
-from .models import device_tokens, devices, users
+from .models import device_tokens, devices, schedules, users
 from .security import (
     create_access_token,
     get_current_user_id,
@@ -250,6 +250,37 @@ async def post_heartbeat(
 # ---------------------------
 # SCHEDULES (App + ESP32 + Admin)
 # ---------------------------
+@app.post("/schedules/bulk")
+async def create_bulk_schedules(payload: schemas.BulkScheduleCreate):
+    values = [
+        {
+            "user_id": s.user_id,
+            "device_id": s.device_id,
+            "pillname": s.pillname,
+            "dose_time": s.dose_time,
+            "repeat_days": s.repeat_days,
+        }
+        for s in payload.schedules
+    ]
+    query = schedules.insert()
+    await database.execute_many(query, values)
+    return {"message": f"{len(values)} schedules created successfully"}
+
+
+@app.delete("/schedules/delete/{user_id}", response_model=schemas.DeleteResponse)
+async def delete_schedules_by_user(user_id: UUID):
+    query = (
+        schedules.delete()
+        .where(schedules.c.user_id == user_id)
+        .returning(schedules.c.id)
+    )
+    rows = await database.fetch_all(query)
+    count = len(rows)
+
+    if count == 0:
+        raise HTTPException(status_code=404, detail="No schedules found for this user")
+
+    return {"message": f"Schedules for user {user_id} deleted. {count} rows removed."}
 
 
 # --- GET schedules by user_id (JWT protected) ---
@@ -317,7 +348,6 @@ async def delete_schedule(schedule_id: UUID):
     return {"detail": "Schedule deleted"}
 
 
-# ---------------------------
 # MEDLOGS (App + ESP32 + Admin)
 # ---------------------------
 
@@ -460,13 +490,13 @@ async def list_device_tokens_by_user(user_id: UUID):
     return tokens
 
 
-# --- Delete a device token by ID ---
-@app.delete("/device_tokens/{token_id}", response_model=schemas.DeleteResponse)
-async def delete_device_token(token_id: int):
-    result = await crud.delete_device_token(database, token_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Token not found")
-    return {"message": f"Token {token_id} deleted successfully"}
+# --- Bulk cleanup of old device tokens ---
+@app.delete("/device_tokens/cleanup", response_model=schemas.DeleteResponse)
+async def cleanup_device_tokens(days: int = 90):
+    result = await crud.cleanup_device_tokens(database, days)
+    return {
+        "message": f"Cleanup complete. {result} tokens deleted (older than {days} days)."
+    }
 
 
 # # --- POST notification by device_id (API key protected) ---

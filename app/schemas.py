@@ -107,6 +107,10 @@ class ScheduleUpdate(BaseModel):
     repeat_days: Optional[int] = None
 
 
+class BulkScheduleCreate(BaseModel):
+    schedules: list[ScheduleCreate]
+
+
 # 4. Medlogs
 class MedlogBase(BaseModel):
     pillname: str

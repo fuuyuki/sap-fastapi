@@ -239,6 +239,16 @@ async def create_schedule_for_user(
     )
 
 
+async def create_bulk_schedules(database, schedules_data):
+    query = schedules.insert()
+    values = [
+        dict(user_id=s.user_id, pillname=s.pillname, dose_time=s.dose_time)
+        for s in schedules_data
+    ]
+    await database.execute_many(query, values)
+    return values
+
+
 async def get_schedule(schedule_id):
     query = schedules.select().where(schedules.c.id == schedule_id)
     return await database.fetch_one(query)
@@ -264,6 +274,11 @@ async def update_schedule(schedule_id: UUID, data: dict):
 
 async def delete_schedule(schedule_id: UUID):
     query = schedules.delete().where(schedules.c.id == schedule_id)
+    return await database.execute(query)
+
+
+async def delete_schedules_by_user(user_id: UUID):
+    query = schedules.delete().where(schedules.c.user_id == str(user_id))
     return await database.execute(query)
 
 
@@ -359,8 +374,9 @@ async def get_latest_notification(user_id: UUID, device_id: str):
     return await database.fetch_one(query)
 
 
-async def delete_device_token(database, token_id: int):
-    query = device_tokens.delete().where(device_tokens.c.id == token_id)
+async def cleanup_device_tokens(database, days: int = 90):
+    cutoff = datetime.now(wib) - timedelta(days=days)
+    query = device_tokens.delete().where(device_tokens.c.created_at < cutoff)
     result = await database.execute(query)
     return result
 
