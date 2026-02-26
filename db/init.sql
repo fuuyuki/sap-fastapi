@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5nXyMXxN9Z9Xv4c879FZSh89uSIgqHgO0fKvZPM2UtyrSkTHAivpDaUYW7ocgwy
+\restrict D6vzRkw9w7BHhXAwbyAkcLuqS4d1L1hjfYbPfIsTA7HgIzicdKqHZwVZBtpzYCC
 
 -- Dumped from database version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
@@ -151,6 +151,22 @@ CREATE TABLE public.users (
 ALTER TABLE public.users OWNER TO fauxpg;
 
 --
+-- Name: wifi_configs; Type: TABLE; Schema: public; Owner: fauxpg
+--
+
+CREATE TABLE public.wifi_configs (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    user_id uuid NOT NULL,
+    device_id character varying NOT NULL,
+    ssid character varying NOT NULL,
+    password character varying NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public.wifi_configs OWNER TO fauxpg;
+
+--
 -- Name: device_tokens id; Type: DEFAULT; Schema: public; Owner: fauxpg
 --
 
@@ -195,10 +211,6 @@ COPY public.notifications (id, device_id, user_id, message, created_at) FROM std
 --
 
 COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days) FROM stdin;
-792c92b7-6979-424a-b358-ba8e711e965c	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Isoniazid	07:00:00	127
-4b1d9b1a-a145-4c69-94ca-b4eb36ffb02c	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Rifampicin	08:00:00	127
-3db64e4a-7258-4b1e-a8f7-bc79e122d5ae	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Pyrazinamide	12:00:00	127
-759a1920-afab-4a4f-b7ce-4fd9b2ad0ad5	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	Ethambutol	18:00:00	127
 \.
 
 
@@ -207,7 +219,16 @@ COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days)
 --
 
 COPY public.users (id, name, email, password_hash, role) FROM stdin;
-fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	User	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	caretaker
+fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	Caretaker	caretaker@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	caretaker
+a87b9694-fdc7-44be-97fd-ce46ec172736	Patient	patient@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$B6A0ZgzBeO/d+19LCYEQwg$AzcpYGrH4LQr4BAnFoCzs5afkNrtIWpZY3NCwDBSxYA	patient
+\.
+
+
+--
+-- Data for Name: wifi_configs; Type: TABLE DATA; Schema: public; Owner: fauxpg
+--
+
+COPY public.wifi_configs (id, user_id, device_id, ssid, password, created_at) FROM stdin;
 \.
 
 
@@ -275,6 +296,14 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: wifi_configs wifi_configs_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.wifi_configs
+    ADD CONSTRAINT wifi_configs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: device_tokens device_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
@@ -339,8 +368,16 @@ ALTER TABLE ONLY public.schedules
 
 
 --
+-- Name: wifi_configs wifi_configs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.wifi_configs
+    ADD CONSTRAINT wifi_configs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5nXyMXxN9Z9Xv4c879FZSh89uSIgqHgO0fKvZPM2UtyrSkTHAivpDaUYW7ocgwy
+\unrestrict D6vzRkw9w7BHhXAwbyAkcLuqS4d1L1hjfYbPfIsTA7HgIzicdKqHZwVZBtpzYCC
 

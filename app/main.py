@@ -9,9 +9,11 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from . import crud, firebase_client, schemas
 from .database import database
-from .models import device_tokens, devices, schedules, users
+from .models import device_tokens, devices, schedules, users, wifi_configs
 from .security import (
     create_access_token,
+    decrypt_password,
+    encrypt_password,
     get_current_user_id,
     hash_password,
     verify_password,
@@ -35,6 +37,7 @@ async def shutdown():
     await database.disconnect()
 
 
+# ESP32 Auto-Offline Check: runs every 10 seconds, marks devices offline if no heartbeat in last 15 seconds
 async def auto_offline_check():
     while True:
         cutoff = datetime.now(wib) - timedelta(seconds=15)
@@ -205,16 +208,6 @@ async def update_device(chip_id: str, update: schemas.DeviceUpdate):
 async def delete_device(chip_id: str):
     await crud.delete_device(chip_id)
     return {"detail": "Device deleted"}
-
-
-# @app.post("/devices/{chip_id}/heartbeat")
-# async def post_heartbeat(chip_id: str):
-#     await crud.heartbeat_device(chip_id)
-#     return {
-#         "chip_id": chip_id,
-#         "status": "online",
-#         "last_seen": datetime.now(timezone.utc),
-#     }
 
 
 @app.post("/devices/{chip_id}/heartbeat/")
@@ -455,6 +448,9 @@ async def create_notification_by_device(
     return new_notif
 
 
+# ---------------------------
+# DEVICE TOKENS (for push notifications)
+# ---------------------------
 # --- Register or update Android FCM token ---
 @app.post("/register_token")
 async def register_token(payload: schemas.TokenRegisterRequest):
@@ -499,30 +495,64 @@ async def cleanup_device_tokens(days: int = 90):
     }
 
 
-# # --- POST notification by device_id (API key protected) ---
-# @app.post("/notifications/{device_id}", response_model=schemas.NotificationRead)
-# async def create_notification_by_device(
-#     device_id: str,
-#     notif: schemas.NotificationCreate,
-#     x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
-# ):
-#     # Validate device + API key
-#     device = await database.fetch_one(
-#         devices.select().where(devices.c.chip_id == device_id)
-#     )
-#     if not device or device["api_key"] != x_api_key:
-#         raise HTTPException(status_code=401, detail="Invalid device API key")
-
-#     new_notif = await crud.create_notification_by_device(
-#         device_id=device_id,
-#         user_id=notif.user_id,
-#         message=notif.message,
-#         created_at=notif.created_at,
-#     )
-#     return new_notif
-
-
 @app.delete("/notifications/{notification_id}")
 async def delete_notification(notification_id: UUID):
     await crud.delete_notification(notification_id)
     return {"detail": "Notification deleted"}
+
+
+# ---------------------------
+# WIFI CONFIGS
+# ---------------------------
+# Set WiFi config (from app)
+@app.post("/wifi-config", response_model=schemas.WiFiConfigOut)
+async def set_wifi_config(
+    user_id: UUID,
+    payload: schemas.WiFiConfigBase,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    # Authorization check
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to set WiFi config for this user"
+        )
+
+    # Insert into DB
+    query = (
+        wifi_configs.insert()
+        .values(
+            user_id=user_id,
+            device_id=payload.device_id,
+            ssid=payload.ssid,
+            password=encrypt_password(payload.password),  # optional encryption
+        )
+        .returning(wifi_configs)
+    )
+    return await database.fetch_one(query)
+
+
+# Fetch WiFi config (from pillbox)
+@app.get("/wifi-config/{chip_id}", response_model=schemas.WiFiConfigOut)
+async def get_wifi_config(
+    chip_id: str,
+    x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
+):
+    # Validate device + API key
+    device = await database.fetch_one(
+        devices.select().where(devices.c.chip_id == chip_id)
+    )
+    if not device or device["api_key"] != x_api_key:
+        raise HTTPException(status_code=401, detail="Invalid device API key")
+
+    # Fetch WiFi config for this device
+    config = await database.fetch_one(
+        wifi_configs.select().where(wifi_configs.c.device_id == chip_id)
+    )
+    if not config:
+        raise HTTPException(status_code=404, detail="WiFi config not found")
+
+    # Optionally decrypt password before returning
+    return {
+        **dict(config),
+        "password": decrypt_password(config["password"]),  # if you encrypted it
+    }

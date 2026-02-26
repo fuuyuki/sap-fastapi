@@ -1,10 +1,17 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+# security.py
+from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
+# Generate a key once and keep it safe (e.g. in environment variable)
+# key = Fernet.generate_key()
+FERNET_KEY = b"QCp2AHfRD1VSf0bqjQZ8feYXe1i-mDtrBqQ0BgEROyc="
+fernet = Fernet(FERNET_KEY)
 
 # --- JWT Config ---
 # ⚠️ Replace with a secure random key in production (e.g. openssl rand -hex 32)
@@ -47,3 +54,21 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
         return user_id
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+
+def encrypt_password(password: str) -> str:
+    """
+    Encrypt a WiFi password using Fernet symmetric encryption.
+    Returns a base64-encoded string safe to store in DB.
+    """
+    token = fernet.encrypt(password.encode("utf-8"))
+    return token.decode("utf-8")
+
+
+def decrypt_password(token: str) -> str:
+    """
+    Decrypt a previously encrypted WiFi password.
+    Returns the original plain text password.
+    """
+    password = fernet.decrypt(token.encode("utf-8"))
+    return password.decode("utf-8")

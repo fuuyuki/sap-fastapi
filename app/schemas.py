@@ -11,8 +11,6 @@ class LoginRequest(BaseModel):
 
 
 # 1. Users
-
-
 class UserMe(BaseModel):
     user_id: UUID
 
@@ -153,7 +151,7 @@ class NotificationRead(NotificationBase):
     created_at: datetime
 
 
-# Pydantic schema for request body
+# 6. Device Tokens
 class TokenRegisterRequest(BaseModel):
     user_id: UUID
     token: str
@@ -163,6 +161,24 @@ class DeviceTokenRead(BaseModel):
     id: int
     user_id: UUID
     token: str
+    created_at: datetime
+
+
+# 7. WiFi Configurations
+class WiFiConfigBase(BaseModel):
+    ssid: str
+    password: str
+
+
+class WiFiConfigCreate(WiFiConfigBase):
+    user_id: UUID
+    device_id: str
+
+
+class WiFiConfigOut(WiFiConfigBase):
+    id: UUID
+    user_id: UUID
+    device_id: str
     created_at: datetime
 
 
