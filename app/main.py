@@ -505,7 +505,7 @@ async def delete_notification(notification_id: UUID):
 # WIFI CONFIGS
 # ---------------------------
 # Set WiFi config (from app)
-@app.post("/wifi-config", response_model=schemas.WiFiConfigOut)
+@app.post("/wifi-config/{user_id}", response_model=schemas.WiFiConfigOut)
 async def set_wifi_config(
     user_id: UUID,
     payload: schemas.WiFiConfigBase,
