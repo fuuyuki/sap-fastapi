@@ -522,7 +522,7 @@ async def set_wifi_config(
         wifi_configs.insert()
         .values(
             user_id=user_id,
-            device_id=payload.device_id,
+            # device_id=payload.device_id
             ssid=payload.ssid,
             password=encrypt_password(payload.password),  # optional encryption
         )
