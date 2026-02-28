@@ -168,6 +168,7 @@ class DeviceTokenRead(BaseModel):
 class WiFiConfigBase(BaseModel):
     ssid: str
     password: str
+    device_id: str
 
 
 class WiFiConfigCreate(WiFiConfigBase):
@@ -178,7 +179,6 @@ class WiFiConfigCreate(WiFiConfigBase):
 class WiFiConfigOut(WiFiConfigBase):
     id: UUID
     user_id: UUID
-    device_id: str
     created_at: datetime
 
 
