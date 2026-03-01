@@ -332,11 +332,6 @@ async def delete_medlog(medlog_id: UUID):
 # NOTIFICATIONS
 # ---------------------------
 # --- Get notifications by user_id ---
-async def get_notifications_by_user(user_id: UUID):
-    query = notifications.select().where(notifications.c.user_id == user_id)
-    return await database.fetch_all(query)
-
-
 async def create_notification_by_device(
     database, device_id: str, user_id: UUID, message: str, created_at: datetime
 ):
@@ -361,33 +356,11 @@ async def get_all_device_tokens(database):
     return rows
 
 
-async def get_latest_notification(user_id: UUID, device_id: str):
-    query = notifications.select()
-    if user_id:
-        query = query.where(notifications.c.user_id == user_id)
-    if device_id:
-        query = query.where(notifications.c.device_id == device_id)
-
-    # Order by created_at descending and limit to 1
-    query = query.order_by(desc(notifications.c.created_at)).limit(1)
-
-    return await database.fetch_one(query)
-
-
 async def cleanup_device_tokens(database, days: int = 90):
     cutoff = datetime.now(wib) - timedelta(days=days)
     query = device_tokens.delete().where(device_tokens.c.created_at < cutoff)
     result = await database.execute(query)
     return result
-
-
-async def get_notifications(user_id: UUID, device_id: str):
-    query = notifications.select()
-    if user_id:
-        query = query.where(notifications.c.user_id == user_id)
-    if device_id:
-        query = query.where(notifications.c.device_id == device_id)
-    return await database.fetch_all(query)
 
 
 async def delete_notification(notification_id: UUID):

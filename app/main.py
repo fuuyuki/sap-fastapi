@@ -400,23 +400,6 @@ async def delete_medlog(medlog_id: UUID):
 # ---------------------------
 # NOTIFICATIONS (App + ESP32)
 # ---------------------------
-# --- GET notifications by user_id (JWT protected) ---
-@app.get("/notifications/{user_id}", response_model=List[schemas.NotificationRead])
-async def list_notifications_by_user(
-    user_id: UUID,
-    current_user_id: str = Depends(get_current_user_id),  # JWT validation
-):
-    if str(user_id) != current_user_id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to view these notifications"
-        )
-
-    notifs = await crud.get_notifications_by_user(user_id)
-    if not notifs:
-        raise HTTPException(status_code=404, detail="No notifications found for user")
-    return notifs
-
-
 # --- POST notification by device_id (API key protected) ---
 @app.post("/notifications/{device_id}", response_model=schemas.NotificationRead)
 async def create_notification_by_device(
@@ -527,6 +510,48 @@ async def set_wifi_config(
         )
         .returning(wifi_configs)
     )
+    return await database.fetch_one(query)
+
+
+@app.put("/wifi-config/{user_id}", response_model=WiFiConfigOut)
+async def update_wifi_config(
+    user_id: UUID,
+    payload: WiFiConfigBase,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    # Authorization check: user_id in path must match logged-in user
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update WiFi config for this user"
+        )
+
+    # Check if config already exists for this user
+    existing = await database.fetch_one(
+        wifi_configs.select().where(wifi_configs.c.user_id == user_id)
+    )
+
+    if existing:
+        # Update existing config
+        query = (
+            wifi_configs.update()
+            .where(wifi_configs.c.user_id == user_id)
+            .values(ssid=payload.ssid, password=encrypt_password(payload.password))
+            .returning(wifi_configs)
+        )
+    else:
+        # Insert new config if none exists yet
+        query = (
+            wifi_configs.insert()
+            .values(
+                user_id=user_id,
+                device_id=payload.device_id,  # still tie to device
+                ssid=payload.ssid,
+                password=encrypt_password(payload.password),
+                created_at=datetime.utcnow(),
+            )
+            .returning(wifi_configs)
+        )
+
     return await database.fetch_one(query)
 
 
