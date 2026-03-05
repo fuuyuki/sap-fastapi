@@ -513,10 +513,10 @@ async def set_wifi_config(
     return await database.fetch_one(query)
 
 
-@app.put("/wifi-config/{user_id}", response_model=WiFiConfigOut)
+@app.put("/wifi-config/{user_id}", response_model=schemas.WiFiConfigOut)
 async def update_wifi_config(
     user_id: UUID,
-    payload: WiFiConfigBase,
+    payload: schemas.WiFiConfigUpdate,
     current_user_id: str = Depends(get_current_user_id),
 ):
     # Authorization check: user_id in path must match logged-in user
@@ -544,10 +544,9 @@ async def update_wifi_config(
             wifi_configs.insert()
             .values(
                 user_id=user_id,
-                device_id=payload.device_id,  # still tie to device
+                # device_id=payload.device_id,  # still tie to device
                 ssid=payload.ssid,
                 password=encrypt_password(payload.password),
-                created_at=datetime.utcnow(),
             )
             .returning(wifi_configs)
         )
@@ -580,3 +579,11 @@ async def get_wifi_config(
         **dict(config),
         "password": decrypt_password(config["password"]),  # if you encrypted it
     }
+
+
+@app.delete("/wifi-config/{wifi_config_id}")
+async def delete_wifi_config(wifi_config_id: UUID):
+    query = wifi_configs.delete().where(wifi_configs.c.id == wifi_config_id)
+    await database.execute(query)
+    # await crud.delete_wifi_config(wifi_config_id)
+    return {"detail": "Wifi Config deleted"}

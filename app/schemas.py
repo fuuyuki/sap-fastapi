@@ -176,6 +176,11 @@ class WiFiConfigCreate(WiFiConfigBase):
     device_id: str
 
 
+class WiFiConfigUpdate(BaseModel):
+    ssid: Optional[str] = None
+    password: Optional[str] = None
+
+
 class WiFiConfigOut(WiFiConfigBase):
     id: UUID
     user_id: UUID
