@@ -36,5 +36,6 @@
   "status": "offline"
 }
 
+psql -U fauxpg -d sapdb
 pg_dump -h localhost -p 5432 -U fauxpg sapdb > db/init.sql
 

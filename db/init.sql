@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict D6vzRkw9w7BHhXAwbyAkcLuqS4d1L1hjfYbPfIsTA7HgIzicdKqHZwVZBtpzYCC
+\restrict dtLTMAU6h5VnVTm4eweJmOplGiFUti93dv9bDTi7VATvx9o1DQpSDvaLSLrXM1r
 
--- Dumped from database version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
+-- Dumped from database version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -186,6 +186,9 @@ COPY public.device_tokens (id, user_id, token, created_at) FROM stdin;
 --
 
 COPY public.devices (chip_id, user_id, name, status, last_seen, api_key) FROM stdin;
+00DE3855B594	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP04	offline	2026-04-19 06:45:50.728122+07	71d3880b72db1e18f23cec342897fb155b25de1876990f08e6e1c173a53ef754
+F0B5AD286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP03	offline	2026-04-19 06:45:41.367051+07	08f5d1f653b0b65ef3b4600e74890fcc06b1130733023142e0658ee9a338bb8c
+F4A2B6B24354	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP01	offline	2026-04-19 06:45:27.211085+07	7cc30933c7b4ad980886fda2e58f1e01539d30620449bd05e742c6c1d2fffd04
 C87BC4286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP02	offline	2026-02-12 23:00:32.743838+07	b6d1c1cda37e9e8bd4d3730d8a20f51882c5f97075b2cdc18c683f320a3172bb
 \.
 
@@ -229,6 +232,7 @@ a87b9694-fdc7-44be-97fd-ce46ec172736	Patient	patient@gmail.com	$argon2id$v=19$m=
 --
 
 COPY public.wifi_configs (id, user_id, device_id, ssid, password, created_at) FROM stdin;
+276fc2c9-11ef-4b3a-8aec-652003b6d004	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	string	gAAAAABppEsEs46nZzmaUO2GmwAYg4mfacf7-_tpRB_sORUxWidMsfm7vwWBATmR8AeEbmxOjWquwQv43cNS8cj5_nR3Gml00A==	2026-03-01 21:19:48.361
 \.
 
 
@@ -379,5 +383,5 @@ ALTER TABLE ONLY public.wifi_configs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict D6vzRkw9w7BHhXAwbyAkcLuqS4d1L1hjfYbPfIsTA7HgIzicdKqHZwVZBtpzYCC
+\unrestrict dtLTMAU6h5VnVTm4eweJmOplGiFUti93dv9bDTi7VATvx9o1DQpSDvaLSLrXM1r
 
