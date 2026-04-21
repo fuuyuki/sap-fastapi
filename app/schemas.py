@@ -144,3 +144,7 @@ class DeviceTokenRead(BaseModel):
     user_id: UUID
     token: str
     created_at: datetime
+
+
+class DeleteResponse(BaseModel):
+    message: str
