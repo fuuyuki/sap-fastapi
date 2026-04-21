@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict dtLTMAU6h5VnVTm4eweJmOplGiFUti93dv9bDTi7VATvx9o1DQpSDvaLSLrXM1r
+\restrict Drc4xJixqaaSdOrBvwXO9qw8kN9PtVvZSKtFDGJxoxekgx4gwiG1dPuxIZBzMMw
 
 -- Dumped from database version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
@@ -78,7 +78,6 @@ ALTER SEQUENCE public.device_tokens_id_seq OWNED BY public.device_tokens.id;
 
 CREATE TABLE public.devices (
     chip_id character varying(100) NOT NULL,
-    user_id uuid NOT NULL,
     name character varying(100) NOT NULL,
     status character varying(50) DEFAULT 'offline'::character varying,
     last_seen timestamp with time zone DEFAULT now() NOT NULL,
@@ -136,6 +135,19 @@ CREATE TABLE public.schedules (
 ALTER TABLE public.schedules OWNER TO fauxpg;
 
 --
+-- Name: user_devices; Type: TABLE; Schema: public; Owner: fauxpg
+--
+
+CREATE TABLE public.user_devices (
+    user_id uuid NOT NULL,
+    device_id character varying(100) NOT NULL,
+    role character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.user_devices OWNER TO fauxpg;
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: fauxpg
 --
 
@@ -185,11 +197,11 @@ COPY public.device_tokens (id, user_id, token, created_at) FROM stdin;
 -- Data for Name: devices; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.devices (chip_id, user_id, name, status, last_seen, api_key) FROM stdin;
-00DE3855B594	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP04	offline	2026-04-19 06:45:50.728122+07	71d3880b72db1e18f23cec342897fb155b25de1876990f08e6e1c173a53ef754
-F0B5AD286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP03	offline	2026-04-19 06:45:41.367051+07	08f5d1f653b0b65ef3b4600e74890fcc06b1130733023142e0658ee9a338bb8c
-F4A2B6B24354	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP01	offline	2026-04-19 06:45:27.211085+07	7cc30933c7b4ad980886fda2e58f1e01539d30620449bd05e742c6c1d2fffd04
-C87BC4286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP02	offline	2026-02-12 23:00:32.743838+07	b6d1c1cda37e9e8bd4d3730d8a20f51882c5f97075b2cdc18c683f320a3172bb
+COPY public.devices (chip_id, name, status, last_seen, api_key) FROM stdin;
+00DE3855B594	SAP04	offline	2026-04-19 06:45:50.728122+07	71d3880b72db1e18f23cec342897fb155b25de1876990f08e6e1c173a53ef754
+F0B5AD286F24	SAP03	offline	2026-04-19 06:45:41.367051+07	08f5d1f653b0b65ef3b4600e74890fcc06b1130733023142e0658ee9a338bb8c
+F4A2B6B24354	SAP01	offline	2026-04-19 06:45:27.211085+07	7cc30933c7b4ad980886fda2e58f1e01539d30620449bd05e742c6c1d2fffd04
+C87BC4286F24	SAP02	offline	2026-02-12 23:00:32.743838+07	b6d1c1cda37e9e8bd4d3730d8a20f51882c5f97075b2cdc18c683f320a3172bb
 \.
 
 
@@ -214,6 +226,14 @@ COPY public.notifications (id, device_id, user_id, message, created_at) FROM std
 --
 
 COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days) FROM stdin;
+\.
+
+
+--
+-- Data for Name: user_devices; Type: TABLE DATA; Schema: public; Owner: fauxpg
+--
+
+COPY public.user_devices (user_id, device_id, role) FROM stdin;
 \.
 
 
@@ -284,6 +304,14 @@ ALTER TABLE ONLY public.schedules
 
 
 --
+-- Name: user_devices user_devices_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT user_devices_pkey PRIMARY KEY (user_id, device_id);
+
+
+--
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
@@ -313,14 +341,6 @@ ALTER TABLE ONLY public.wifi_configs
 
 ALTER TABLE ONLY public.device_tokens
     ADD CONSTRAINT device_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
-
-
---
--- Name: devices devices_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.devices
-    ADD CONSTRAINT devices_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -372,6 +392,22 @@ ALTER TABLE ONLY public.schedules
 
 
 --
+-- Name: user_devices user_devices_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT user_devices_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(chip_id);
+
+
+--
+-- Name: user_devices user_devices_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT user_devices_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: wifi_configs wifi_configs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
@@ -383,5 +419,5 @@ ALTER TABLE ONLY public.wifi_configs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dtLTMAU6h5VnVTm4eweJmOplGiFUti93dv9bDTi7VATvx9o1DQpSDvaLSLrXM1r
+\unrestrict Drc4xJixqaaSdOrBvwXO9qw8kN9PtVvZSKtFDGJxoxekgx4gwiG1dPuxIZBzMMw
 
