@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from . import crud, firebase_client, schemas
 from .database import database
-from .models import device_tokens, devices, schedules, users, wifi_configs
+from .models import device_tokens, devices, schedules, users
 from .security import (
     create_access_token,
     decrypt_password,

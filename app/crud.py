@@ -7,7 +7,7 @@ from sqlalchemy import desc, func
 
 from .database import database
 from .firebase_client import send_push
-from .models import device_tokens, devices, medlogs, notifications, schedules, users
+from .models import device_tokens, devices, medlogs, schedules, users
 from .security import hash_password
 
 wib = pytz.timezone("Asia/Jakarta")
