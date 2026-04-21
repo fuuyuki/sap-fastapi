@@ -133,24 +133,6 @@ class MedlogUpdate(BaseModel):
     status: Optional[str] = None
 
 
-# 5. Notifications
-class NotificationBase(BaseModel):
-    message: str
-
-
-class NotificationCreate(NotificationBase):
-    device_id: str
-    user_id: UUID
-    created_at: datetime
-
-
-class NotificationRead(NotificationBase):
-    id: UUID
-    device_id: str
-    user_id: UUID
-    created_at: datetime
-
-
 # 6. Device Tokens
 class TokenRegisterRequest(BaseModel):
     user_id: UUID
@@ -162,30 +144,3 @@ class DeviceTokenRead(BaseModel):
     user_id: UUID
     token: str
     created_at: datetime
-
-
-# 7. WiFi Configurations
-class WiFiConfigBase(BaseModel):
-    ssid: str
-    password: str
-    device_id: str
-
-
-class WiFiConfigCreate(WiFiConfigBase):
-    user_id: UUID
-    device_id: str
-
-
-class WiFiConfigUpdate(BaseModel):
-    ssid: Optional[str] = None
-    password: Optional[str] = None
-
-
-class WiFiConfigOut(WiFiConfigBase):
-    id: UUID
-    user_id: UUID
-    created_at: datetime
-
-
-class DeleteResponse(BaseModel):
-    message: str

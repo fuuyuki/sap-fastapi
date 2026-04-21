@@ -89,27 +89,6 @@ medlogs = Table(
     Column("status", String(50), nullable=False),  # "taken" or "missed"
 )
 
-# 5. Notifications
-notifications = Table(
-    "notifications",
-    metadata,
-    Column(
-        "id",
-        UUID(as_uuid=True),
-        primary_key=True,
-        server_default=text("uuid_generate_v4()"),
-    ),
-    Column("device_id", String(100), ForeignKey("devices.chip_id"), nullable=False),
-    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), nullable=False),
-    Column("message", String(255), nullable=False),
-    Column(
-        "created_at",
-        TIMESTAMP(timezone=False),
-        server_default=func.now(),
-        nullable=False,
-    ),
-)
-
 # 6. Device Tokens (for push notifications)
 device_tokens = Table(
     "device_tokens",
@@ -117,17 +96,5 @@ device_tokens = Table(
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), nullable=False),
     Column("token", String, nullable=False),
-    Column("created_at", TIMESTAMP(timezone=False), server_default=func.now()),
-)
-
-# 7. WiFi Configurations (for ESP32 to connect to home WiFi)
-wifi_configs = Table(
-    "wifi_configs",
-    metadata,
-    Column("id", UUID, primary_key=True, server_default=text("uuid_generate_v4()")),
-    Column("user_id", UUID, ForeignKey("users.id"), nullable=False),
-    Column("device_id", String, nullable=False),
-    Column("ssid", String, nullable=False),
-    Column("password", String, nullable=False),
     Column("created_at", TIMESTAMP(timezone=False), server_default=func.now()),
 )
