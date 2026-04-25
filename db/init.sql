@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict BTxIWd3peEy218VLt6LAct7HaDocziu7nhNexeUG2WLfwjeU9D1P3WHtCZtzEd7
+\restrict RhcnyDp8R0EamlxGjN1M0L6aOPVQbTK2UWzvACzZWyJ315fA2A8zJEcWRy6mUQs
 
 -- Dumped from database version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
@@ -44,7 +44,7 @@ CREATE TABLE public.device_tokens (
     id integer NOT NULL,
     user_id uuid,
     token text NOT NULL,
-    created_at timestamp without time zone DEFAULT now()
+    created_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -420,5 +420,5 @@ ALTER TABLE ONLY public.wifi_configs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict BTxIWd3peEy218VLt6LAct7HaDocziu7nhNexeUG2WLfwjeU9D1P3WHtCZtzEd7
+\unrestrict RhcnyDp8R0EamlxGjN1M0L6aOPVQbTK2UWzvACzZWyJ315fA2A8zJEcWRy6mUQs
 
