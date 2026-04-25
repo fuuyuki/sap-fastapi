@@ -61,7 +61,7 @@ async def register(user: schemas.UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Hash password securely
-    hashed_pw = hash_password(user.password_hash)
+    hashed_pw = hash_password(user.password)
 
     # Insert and return UUID
     query = (
@@ -69,7 +69,7 @@ async def register(user: schemas.UserCreate):
         .values(
             name=user.name,
             email=user.email,
-            password_hash=hashed_pw,
+            password=hashed_pw,
             role=user.role,
         )
         .returning(users.c.id)
@@ -89,7 +89,7 @@ async def login_json(credentials: schemas.LoginRequest):
     user = await database.fetch_one(
         users.select().where(users.c.email == credentials.email)
     )
-    if not user or not verify_password(credentials.password, user["password_hash"]):
+    if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
     token = create_access_token(str(user["id"]))
@@ -102,7 +102,7 @@ async def login_form(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await database.fetch_one(
         users.select().where(users.c.email == form_data.username)
     )
-    if not user or not verify_password(form_data.password, user["password_hash"]):
+    if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
     token = create_access_token(str(user["id"]))

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Drc4xJixqaaSdOrBvwXO9qw8kN9PtVvZSKtFDGJxoxekgx4gwiG1dPuxIZBzMMw
+\restrict BTxIWd3peEy218VLt6LAct7HaDocziu7nhNexeUG2WLfwjeU9D1P3WHtCZtzEd7
 
 -- Dumped from database version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
@@ -155,7 +155,7 @@ CREATE TABLE public.users (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     name character varying(100) NOT NULL,
     email character varying(100) NOT NULL,
-    password_hash character varying(255) NOT NULL,
+    password character varying(255) NOT NULL,
     role character varying(50) DEFAULT 'patient'::character varying NOT NULL
 );
 
@@ -241,9 +241,10 @@ COPY public.user_devices (user_id, device_id, role) FROM stdin;
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.users (id, name, email, password_hash, role) FROM stdin;
+COPY public.users (id, name, email, password, role) FROM stdin;
 fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	Caretaker	caretaker@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	caretaker
 a87b9694-fdc7-44be-97fd-ce46ec172736	Patient	patient@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$B6A0ZgzBeO/d+19LCYEQwg$AzcpYGrH4LQr4BAnFoCzs5afkNrtIWpZY3NCwDBSxYA	patient
+a0f717b8-17c2-480c-b181-c86ef83a0419	Admin	admin@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$6r3XGkNobc0ZozRmrDWmlA$ESU9mO9rxRLLhJRzsNxW0k9iqXZIuDrW7wYY21fSqLA	caretaker
 \.
 
 
@@ -419,5 +420,5 @@ ALTER TABLE ONLY public.wifi_configs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Drc4xJixqaaSdOrBvwXO9qw8kN9PtVvZSKtFDGJxoxekgx4gwiG1dPuxIZBzMMw
+\unrestrict BTxIWd3peEy218VLt6LAct7HaDocziu7nhNexeUG2WLfwjeU9D1P3WHtCZtzEd7
 

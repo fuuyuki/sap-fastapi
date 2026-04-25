@@ -24,7 +24,7 @@ class UserBase(BaseModel):
 class UserCreate(BaseModel):
     name: str
     email: str
-    password_hash: Annotated[str, StringConstraints(min_length=8)]
+    password: Annotated[str, StringConstraints(min_length=8)]
     role: str = "patient"
 
 

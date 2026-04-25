@@ -33,7 +33,7 @@ users = Table(
     ),
     Column("name", String(100), nullable=False),
     Column("email", String(100), unique=True, nullable=False),
-    Column("password_hash", String(255), nullable=False),
+    Column("password", String(255), nullable=False),
     Column("role", String(50), default="patient", nullable=False),  # e.g. patient/admin
 )
 
