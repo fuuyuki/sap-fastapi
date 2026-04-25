@@ -343,6 +343,11 @@ async def get_all_device_tokens(database):
     return rows
 
 
+async def delete_device_tokens_by_user(database, user_id: str):
+    query = device_tokens.delete().where(device_tokens.c.user_id == user_id)
+    return await database.execute(query)
+
+
 async def cleanup_device_tokens(database, days: int = 90):
     cutoff = datetime.now(wib) - timedelta(days=days)
     query = device_tokens.delete().where(device_tokens.c.created_at < cutoff)

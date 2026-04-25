@@ -435,6 +435,20 @@ async def list_device_tokens_by_user(user_id: UUID):
     return tokens
 
 
+@app.delete("/device-tokens/{user_id}")
+async def delete_device_tokens(
+    user_id: str, current_user_id: str = Depends(get_current_user_id)
+):
+    # Authorization check
+    if user_id != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete tokens for this user"
+        )
+
+    result = await crud.delete_device_tokens_by_user(database, user_id)
+    return {"deleted_tokens": result}
+
+
 # --- Bulk cleanup of old device tokens ---
 @app.delete("/device_tokens/cleanup", response_model=schemas.DeleteResponse)
 async def cleanup_device_tokens(days: int = 90):
