@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytz
-from sqlalchemy import desc, func
+from sqlalchemy import func
 
 from .database import database
 from .firebase_client import send_push
@@ -331,19 +331,6 @@ async def delete_medlog(medlog_id: UUID):
 # ---------------------------
 # NOTIFICATIONS
 # ---------------------------
-# --- Get notifications by user_id ---
-async def create_notification_by_device(
-    database, device_id: str, user_id: UUID, message: str, created_at: datetime
-):
-    query = notifications.insert().values(
-        device_id=device_id, user_id=user_id, message=message, created_at=created_at
-    )
-    notif_id = await database.execute(query)
-    return await database.fetch_one(
-        notifications.select().where(notifications.c.id == notif_id)
-    )
-
-
 async def get_device_tokens_by_user(database, user_id: UUID):
     query = device_tokens.select().where(device_tokens.c.user_id == user_id)
     rows = await database.fetch_all(query)
@@ -361,8 +348,3 @@ async def cleanup_device_tokens(database, days: int = 90):
     query = device_tokens.delete().where(device_tokens.c.created_at < cutoff)
     result = await database.execute(query)
     return result
-
-
-async def delete_notification(notification_id: UUID):
-    query = notifications.delete().where(notifications.c.id == notification_id)
-    return await database.execute(query)
