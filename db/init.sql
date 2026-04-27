@@ -164,7 +164,7 @@ COPY public.commands (id, user_id, device_id, command, created_at) FROM stdin;
 -- Data for Name: devices; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.devices (id, user_id, name, chip_id, status, last_seen) FROM stdin;
+COPY public.devices (id, user_id, name, chip_id, status, last_seen, api_key) FROM stdin;
 00DE3855B594	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP04	offline	2026-04-19 06:45:50.728122+07	71d3880b72db1e18f23cec342897fb155b25de1876990f08e6e1c173a53ef754
 F0B5AD286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP03	offline	2026-04-19 06:45:41.367051+07	08f5d1f653b0b65ef3b4600e74890fcc06b1130733023142e0658ee9a338bb8c
 F4A2B6B24354	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP01	offline	2026-04-19 06:45:27.211085+07	7cc30933c7b4ad980886fda2e58f1e01539d30620449bd05e742c6c1d2fffd04
