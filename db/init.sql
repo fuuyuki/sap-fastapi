@@ -78,6 +78,7 @@ ALTER SEQUENCE public.device_tokens_id_seq OWNED BY public.device_tokens.id;
 
 CREATE TABLE public.devices (
     chip_id character varying(100) NOT NULL,
+    user_id uuid NOT NULL,
     name character varying(100) NOT NULL,
     status character varying(50) DEFAULT 'offline'::character varying,
     last_seen timestamp with time zone DEFAULT now() NOT NULL,
