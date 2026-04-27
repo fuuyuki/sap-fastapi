@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict RhcnyDp8R0EamlxGjN1M0L6aOPVQbTK2UWzvACzZWyJ315fA2A8zJEcWRy6mUQs
+\restrict cMfsPrsxaEeMeVLIMAbbbiFTuldsKFUd3Q2bfrcR6AyctlDqs3FzuXHjM0AL6PU
 
--- Dumped from database version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
+-- Dumped from database version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.20 (Ubuntu 14.20-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -32,56 +32,59 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
 
+--
+-- Name: command_enum; Type: TYPE; Schema: public; Owner: fauxpg
+--
+
+CREATE TYPE public.command_enum AS ENUM (
+    'reset',
+    'snooze'
+);
+
+
+ALTER TYPE public.command_enum OWNER TO fauxpg;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: device_tokens; Type: TABLE; Schema: public; Owner: fauxpg
+-- Name: alembic_version; Type: TABLE; Schema: public; Owner: fauxpg
 --
 
-CREATE TABLE public.device_tokens (
-    id integer NOT NULL,
-    user_id uuid,
-    token text NOT NULL,
-    created_at timestamp with time zone DEFAULT now()
+CREATE TABLE public.alembic_version (
+    version_num character varying(32) NOT NULL
 );
 
 
-ALTER TABLE public.device_tokens OWNER TO fauxpg;
+ALTER TABLE public.alembic_version OWNER TO fauxpg;
 
 --
--- Name: device_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: fauxpg
+-- Name: commands; Type: TABLE; Schema: public; Owner: fauxpg
 --
 
-CREATE SEQUENCE public.device_tokens_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
+CREATE TABLE public.commands (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    device_id uuid NOT NULL,
+    command public.command_enum NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
 
 
-ALTER TABLE public.device_tokens_id_seq OWNER TO fauxpg;
-
---
--- Name: device_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fauxpg
---
-
-ALTER SEQUENCE public.device_tokens_id_seq OWNED BY public.device_tokens.id;
-
+ALTER TABLE public.commands OWNER TO fauxpg;
 
 --
 -- Name: devices; Type: TABLE; Schema: public; Owner: fauxpg
 --
 
 CREATE TABLE public.devices (
-    chip_id character varying(100) NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
     name character varying(100) NOT NULL,
-    status character varying(50) DEFAULT 'offline'::character varying,
-    last_seen timestamp with time zone DEFAULT now() NOT NULL,
-    api_key character varying(255) NOT NULL
+    chip_id character varying(100) NOT NULL,
+    status text DEFAULT 'offline'::text,
+    last_seen timestamp with time zone
 );
 
 
@@ -92,60 +95,35 @@ ALTER TABLE public.devices OWNER TO fauxpg;
 --
 
 CREATE TABLE public.medlogs (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
-    device_id character varying(100) NOT NULL,
-    pillname character varying(100) NOT NULL,
-    scheduled_time timestamp without time zone DEFAULT now() NOT NULL,
-    status character varying(50) NOT NULL
+    device_id uuid NOT NULL,
+    pillname character varying(100),
+    taken_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    status character varying(20),
+    schedule_time timestamp without time zone,
+    CONSTRAINT medlogs_status_check CHECK (((status)::text = ANY ((ARRAY['taken'::character varying, 'missed'::character varying])::text[])))
 );
 
 
 ALTER TABLE public.medlogs OWNER TO fauxpg;
 
 --
--- Name: notifications; Type: TABLE; Schema: public; Owner: fauxpg
---
-
-CREATE TABLE public.notifications (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    device_id character varying(100) NOT NULL,
-    user_id uuid NOT NULL,
-    message character varying(255) NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
-ALTER TABLE public.notifications OWNER TO fauxpg;
-
---
 -- Name: schedules; Type: TABLE; Schema: public; Owner: fauxpg
 --
 
 CREATE TABLE public.schedules (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
-    device_id character varying(100) NOT NULL,
+    device_id uuid NOT NULL,
     pillname character varying(100) NOT NULL,
-    dose_time time without time zone NOT NULL,
-    repeat_days integer DEFAULT 0
+    repeat_days integer DEFAULT 0,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    dose_time time without time zone NOT NULL
 );
 
 
 ALTER TABLE public.schedules OWNER TO fauxpg;
-
---
--- Name: user_devices; Type: TABLE; Schema: public; Owner: fauxpg
---
-
-CREATE TABLE public.user_devices (
-    user_id uuid NOT NULL,
-    device_id character varying(100) NOT NULL,
-    role character varying(50) NOT NULL
-);
-
-
-ALTER TABLE public.user_devices OWNER TO fauxpg;
 
 --
 -- Name: users; Type: TABLE; Schema: public; Owner: fauxpg
@@ -154,42 +132,31 @@ ALTER TABLE public.user_devices OWNER TO fauxpg;
 CREATE TABLE public.users (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     name character varying(100) NOT NULL,
-    email character varying(100) NOT NULL,
-    password character varying(255) NOT NULL,
-    role character varying(50) DEFAULT 'patient'::character varying NOT NULL
+    email character varying(150) NOT NULL,
+    password text NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
 ALTER TABLE public.users OWNER TO fauxpg;
 
 --
--- Name: wifi_configs; Type: TABLE; Schema: public; Owner: fauxpg
+-- Data for Name: alembic_version; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-CREATE TABLE public.wifi_configs (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    device_id character varying NOT NULL,
-    ssid character varying NOT NULL,
-    password character varying NOT NULL,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-
-ALTER TABLE public.wifi_configs OWNER TO fauxpg;
-
---
--- Name: device_tokens id; Type: DEFAULT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.device_tokens ALTER COLUMN id SET DEFAULT nextval('public.device_tokens_id_seq'::regclass);
+COPY public.alembic_version (version_num) FROM stdin;
+add_uuid_default
+111aaa
+222bbb
+7d808d5319fa
+\.
 
 
 --
--- Data for Name: device_tokens; Type: TABLE DATA; Schema: public; Owner: fauxpg
+-- Data for Name: commands; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.device_tokens (id, user_id, token, created_at) FROM stdin;
+COPY public.commands (id, user_id, device_id, command, created_at) FROM stdin;
 \.
 
 
@@ -197,11 +164,7 @@ COPY public.device_tokens (id, user_id, token, created_at) FROM stdin;
 -- Data for Name: devices; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.devices (chip_id, name, status, last_seen, api_key) FROM stdin;
-00DE3855B594	SAP04	offline	2026-04-19 06:45:50.728122+07	71d3880b72db1e18f23cec342897fb155b25de1876990f08e6e1c173a53ef754
-F0B5AD286F24	SAP03	offline	2026-04-19 06:45:41.367051+07	08f5d1f653b0b65ef3b4600e74890fcc06b1130733023142e0658ee9a338bb8c
-F4A2B6B24354	SAP01	offline	2026-04-19 06:45:27.211085+07	7cc30933c7b4ad980886fda2e58f1e01539d30620449bd05e742c6c1d2fffd04
-C87BC4286F24	SAP02	offline	2026-02-12 23:00:32.743838+07	b6d1c1cda37e9e8bd4d3730d8a20f51882c5f97075b2cdc18c683f320a3172bb
+COPY public.devices (id, user_id, name, chip_id, status, last_seen) FROM stdin;
 \.
 
 
@@ -209,15 +172,7 @@ C87BC4286F24	SAP02	offline	2026-02-12 23:00:32.743838+07	b6d1c1cda37e9e8bd4d3730
 -- Data for Name: medlogs; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.medlogs (id, user_id, device_id, pillname, scheduled_time, status) FROM stdin;
-\.
-
-
---
--- Data for Name: notifications; Type: TABLE DATA; Schema: public; Owner: fauxpg
---
-
-COPY public.notifications (id, device_id, user_id, message, created_at) FROM stdin;
+COPY public.medlogs (id, user_id, device_id, pillname, taken_at, status, schedule_time) FROM stdin;
 \.
 
 
@@ -225,15 +180,7 @@ COPY public.notifications (id, device_id, user_id, message, created_at) FROM std
 -- Data for Name: schedules; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.schedules (id, user_id, device_id, pillname, dose_time, repeat_days) FROM stdin;
-\.
-
-
---
--- Data for Name: user_devices; Type: TABLE DATA; Schema: public; Owner: fauxpg
---
-
-COPY public.user_devices (user_id, device_id, role) FROM stdin;
+COPY public.schedules (id, user_id, device_id, pillname, repeat_days, created_at, dose_time) FROM stdin;
 \.
 
 
@@ -241,35 +188,33 @@ COPY public.user_devices (user_id, device_id, role) FROM stdin;
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: fauxpg
 --
 
-COPY public.users (id, name, email, password, role) FROM stdin;
-fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	Caretaker	caretaker@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	caretaker
-a87b9694-fdc7-44be-97fd-ce46ec172736	Patient	patient@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$B6A0ZgzBeO/d+19LCYEQwg$AzcpYGrH4LQr4BAnFoCzs5afkNrtIWpZY3NCwDBSxYA	patient
-a0f717b8-17c2-480c-b181-c86ef83a0419	Admin	admin@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$6r3XGkNobc0ZozRmrDWmlA$ESU9mO9rxRLLhJRzsNxW0k9iqXZIuDrW7wYY21fSqLA	caretaker
+COPY public.users (id, name, email, password, created_at) FROM stdin;
+9637e5fb-1885-4d82-95d2-f074ae41981b	user	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$fG/tPec8J0SodS7lfA8BQA$Lbjme+7HsCzdmr7TlVJtD2FYvT/LVqRUEc9Bs0OAy1k	2026-02-05 22:18:05.297336
 \.
 
 
 --
--- Data for Name: wifi_configs; Type: TABLE DATA; Schema: public; Owner: fauxpg
+-- Name: alembic_version alembic_version_pkc; Type: CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
-COPY public.wifi_configs (id, user_id, device_id, ssid, password, created_at) FROM stdin;
-276fc2c9-11ef-4b3a-8aec-652003b6d004	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	C87BC4286F24	string	gAAAAABppEsEs46nZzmaUO2GmwAYg4mfacf7-_tpRB_sORUxWidMsfm7vwWBATmR8AeEbmxOjWquwQv43cNS8cj5_nR3Gml00A==	2026-03-01 21:19:48.361
-\.
-
-
---
--- Name: device_tokens_id_seq; Type: SEQUENCE SET; Schema: public; Owner: fauxpg
---
-
-SELECT pg_catalog.setval('public.device_tokens_id_seq', 1, false);
+ALTER TABLE ONLY public.alembic_version
+    ADD CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num);
 
 
 --
--- Name: device_tokens device_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
+-- Name: commands commands_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
-ALTER TABLE ONLY public.device_tokens
-    ADD CONSTRAINT device_tokens_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.commands
+    ADD CONSTRAINT commands_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: devices devices_chip_id_key; Type: CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.devices
+    ADD CONSTRAINT devices_chip_id_key UNIQUE (chip_id);
 
 
 --
@@ -277,7 +222,7 @@ ALTER TABLE ONLY public.device_tokens
 --
 
 ALTER TABLE ONLY public.devices
-    ADD CONSTRAINT devices_pkey PRIMARY KEY (chip_id);
+    ADD CONSTRAINT devices_pkey PRIMARY KEY (id);
 
 
 --
@@ -289,27 +234,11 @@ ALTER TABLE ONLY public.medlogs
 
 
 --
--- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.notifications
-    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
-
-
---
 -- Name: schedules schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
 ALTER TABLE ONLY public.schedules
     ADD CONSTRAINT schedules_pkey PRIMARY KEY (id);
-
-
---
--- Name: user_devices user_devices_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.user_devices
-    ADD CONSTRAINT user_devices_pkey PRIMARY KEY (user_id, device_id);
 
 
 --
@@ -329,19 +258,27 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: wifi_configs wifi_configs_pkey; Type: CONSTRAINT; Schema: public; Owner: fauxpg
+-- Name: commands commands_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
-ALTER TABLE ONLY public.wifi_configs
-    ADD CONSTRAINT wifi_configs_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.commands
+    ADD CONSTRAINT commands_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE CASCADE;
 
 
 --
--- Name: device_tokens device_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
+-- Name: commands commands_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
 --
 
-ALTER TABLE ONLY public.device_tokens
-    ADD CONSTRAINT device_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+ALTER TABLE ONLY public.commands
+    ADD CONSTRAINT commands_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: devices devices_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
+--
+
+ALTER TABLE ONLY public.devices
+    ADD CONSTRAINT devices_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -349,7 +286,7 @@ ALTER TABLE ONLY public.device_tokens
 --
 
 ALTER TABLE ONLY public.medlogs
-    ADD CONSTRAINT medlogs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(chip_id);
+    ADD CONSTRAINT medlogs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE CASCADE;
 
 
 --
@@ -357,23 +294,7 @@ ALTER TABLE ONLY public.medlogs
 --
 
 ALTER TABLE ONLY public.medlogs
-    ADD CONSTRAINT medlogs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
-
-
---
--- Name: notifications notifications_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.notifications
-    ADD CONSTRAINT notifications_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(chip_id);
-
-
---
--- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.notifications
-    ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT medlogs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -381,7 +302,7 @@ ALTER TABLE ONLY public.notifications
 --
 
 ALTER TABLE ONLY public.schedules
-    ADD CONSTRAINT schedules_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(chip_id);
+    ADD CONSTRAINT schedules_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE CASCADE;
 
 
 --
@@ -389,36 +310,12 @@ ALTER TABLE ONLY public.schedules
 --
 
 ALTER TABLE ONLY public.schedules
-    ADD CONSTRAINT schedules_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
-
-
---
--- Name: user_devices user_devices_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.user_devices
-    ADD CONSTRAINT user_devices_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(chip_id);
-
-
---
--- Name: user_devices user_devices_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.user_devices
-    ADD CONSTRAINT user_devices_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
-
-
---
--- Name: wifi_configs wifi_configs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fauxpg
---
-
-ALTER TABLE ONLY public.wifi_configs
-    ADD CONSTRAINT wifi_configs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT schedules_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RhcnyDp8R0EamlxGjN1M0L6aOPVQbTK2UWzvACzZWyJ315fA2A8zJEcWRy6mUQs
+\unrestrict cMfsPrsxaEeMeVLIMAbbbiFTuldsKFUd3Q2bfrcR6AyctlDqs3FzuXHjM0AL6PU
 
