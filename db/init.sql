@@ -165,6 +165,10 @@ COPY public.commands (id, user_id, device_id, command, created_at) FROM stdin;
 --
 
 COPY public.devices (id, user_id, name, chip_id, status, last_seen) FROM stdin;
+00DE3855B594	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP04	offline	2026-04-19 06:45:50.728122+07	71d3880b72db1e18f23cec342897fb155b25de1876990f08e6e1c173a53ef754
+F0B5AD286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP03	offline	2026-04-19 06:45:41.367051+07	08f5d1f653b0b65ef3b4600e74890fcc06b1130733023142e0658ee9a338bb8c
+F4A2B6B24354	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP01	offline	2026-04-19 06:45:27.211085+07	7cc30933c7b4ad980886fda2e58f1e01539d30620449bd05e742c6c1d2fffd04
+C87BC4286F24	fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	SAP02	offline	2026-02-12 23:00:32.743838+07	b6d1c1cda37e9e8bd4d3730d8a20f51882c5f97075b2cdc18c683f320a3172bb
 \.
 
 
@@ -189,7 +193,9 @@ COPY public.schedules (id, user_id, device_id, pillname, repeat_days, created_at
 --
 
 COPY public.users (id, name, email, password, created_at) FROM stdin;
-9637e5fb-1885-4d82-95d2-f074ae41981b	user	user@example.com	$argon2id$v=19$m=65536,t=3,p=4$fG/tPec8J0SodS7lfA8BQA$Lbjme+7HsCzdmr7TlVJtD2FYvT/LVqRUEc9Bs0OAy1k	2026-02-05 22:18:05.297336
+fd1ff641-ec8a-4424-9c1f-4b5c1f2c91e6	Caretaker	caretaker@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$7L1XyjnHeM/Zm/M+J4TwPg$qe71LEgKzTFASqW58KwF/CCfja/o3tNcQmEP+I65rvc	caretaker
+a87b9694-fdc7-44be-97fd-ce46ec172736	Patient	patient@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$B6A0ZgzBeO/d+19LCYEQwg$AzcpYGrH4LQr4BAnFoCzs5afkNrtIWpZY3NCwDBSxYA	patient
+a0f717b8-17c2-480c-b181-c86ef83a0419	Admin	admin@gmail.com	$argon2id$v=19$m=65536,t=3,p=4$6r3XGkNobc0ZozRmrDWmlA$ESU9mO9rxRLLhJRzsNxW0k9iqXZIuDrW7wYY21fSqLA	caretaker
 \.
 
 
