@@ -169,6 +169,24 @@ async def delete_user(user_id: UUID):
     return {"detail": "User deleted"}
 
 
+@app.get("/caretakers/{caretaker_id}/patients", response_model=List[schemas.UserOut])
+async def list_patients_by_caretaker(
+    caretaker_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    # Ensure the caller is the caretaker themselves
+    if str(caretaker_id) != current_user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view patients")
+
+    patients_query = users.select().where(users.c.caretaker_id == caretaker_id)
+    patients = await database.fetch_all(patients_query)
+
+    if not patients:
+        raise HTTPException(status_code=404, detail="No patients found for caretaker")
+
+    return patients
+
+
 # ---------------------------
 # ADHERENCE SUMMARY (App)
 # ---------------------------

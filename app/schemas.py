@@ -40,6 +40,13 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
 
 
+class UserOut(BaseModel):
+    id: UUID
+    name: str
+    email: str
+    role: str
+
+
 class PasswordUpdate(BaseModel):
     new_password: str
 
