@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytz
-from sqlalchemy import func
+from sqlalchemy import desc, func
 
 from .database import database
 from .firebase_client import send_push
@@ -16,15 +16,6 @@ wib = pytz.timezone("Asia/Jakarta")
 # ---------------------------
 # USERS
 # ---------------------------
-async def create_user(name: str, email: str, password_hash: str, role: str = "patient"):
-    query = (
-        users.insert()
-        .values(name=name, email=email, password_hash=password_hash, role=role)
-        .returning(users.c.id)
-    )
-    return await database.execute(query)
-
-
 async def get_user(user_id: UUID):
     query = users.select().where(users.c.id == user_id)
     return await database.fetch_one(query)
@@ -143,10 +134,8 @@ async def get_weekly_adherence(user_id: UUID) -> float:
 # ---------------------------
 # DEVICES
 # ---------------------------
-
-
 async def create_device(
-    chip_id: str, user_id: UUID, name: str, status: str = "offline"
+    chip_id: str, patient_id: UUID, name: str, status: str = "offline"
 ):
     # Generate a secure random API key
     api_key = secrets.token_hex(32)
@@ -155,7 +144,7 @@ async def create_device(
         devices.insert()
         .values(
             chip_id=chip_id,
-            user_id=user_id,
+            patient_id=patient_id,
             name=name,
             api_key=api_key,
             last_seen=datetime.now(wib),
@@ -163,7 +152,7 @@ async def create_device(
         )
         .returning(
             devices.c.chip_id,
-            devices.c.user_id,
+            devices.c.patient_id,
             devices.c.name,
             devices.c.last_seen,
             devices.c.api_key,
@@ -175,10 +164,24 @@ async def create_device(
 
 
 # --- Get schedules by user_id ---
-async def get_device_by_user(user_id: UUID):
-    query = devices.select().where(devices.c.user_id == user_id)
+async def get_device_by_patient(patient_id: UUID):
+    query = devices.select().where(devices.c.patient_id == patient_id)
     record = await database.fetch_one(query)
     return dict(record) if record else None
+
+
+async def get_devices_by_caretaker(caretaker_id: UUID):
+    # Get all patients managed by this caretaker
+    patients_query = users.select().where(users.c.caretaker_id == caretaker_id)
+    patients = await database.fetch_all(patients_query)
+    patient_ids = [p["id"] for p in patients]
+
+    if not patient_ids:
+        return []
+
+    # Get all devices belonging to those patients
+    devices_query = devices.select().where(devices.c.patient_id.in_(patient_ids))
+    return await database.fetch_all(devices_query)
 
 
 # --- Get schedules by chip_id (device) ---
@@ -216,7 +219,7 @@ async def delete_device(chip_id: str):
 # SCHEDULES
 # ---------------------------
 async def create_schedule_for_user(
-    user_id: UUID,
+    patient_id: UUID,
     device_id: str,
     pillname: str,
     dose_time: datetime,
@@ -225,7 +228,7 @@ async def create_schedule_for_user(
     query = (
         schedules.insert()
         .values(
-            user_id=user_id,
+            patient_id=patient_id,
             device_id=device_id,
             pillname=pillname,
             dose_time=dose_time,
@@ -242,7 +245,7 @@ async def create_schedule_for_user(
 async def create_bulk_schedules(database, schedules_data):
     query = schedules.insert()
     values = [
-        dict(user_id=s.user_id, pillname=s.pillname, dose_time=s.dose_time)
+        dict(patient_id=s.patient_id, pillname=s.pillname, dose_time=s.dose_time)
         for s in schedules_data
     ]
     await database.execute_many(query, values)
@@ -255,8 +258,8 @@ async def get_schedule(schedule_id):
 
 
 # --- Get schedules by user_id ---
-async def get_schedules_by_user(user_id: UUID):
-    query = schedules.select().where(schedules.c.user_id == user_id)
+async def get_schedules_by_user(patient_id: UUID):
+    query = schedules.select().where(schedules.c.patient_id == patient_id)
     return await database.fetch_all(query)
 
 
@@ -277,8 +280,8 @@ async def delete_schedule(schedule_id: UUID):
     return await database.execute(query)
 
 
-async def delete_schedules_by_user(user_id: UUID):
-    query = schedules.delete().where(schedules.c.user_id == str(user_id))
+async def delete_schedules_by_user(patient_id: UUID):
+    query = schedules.delete().where(schedules.c.user_id == str(patient_id))
     return await database.execute(query)
 
 
@@ -288,19 +291,23 @@ async def delete_schedules_by_user(user_id: UUID):
 
 
 # --- Get medlogs by user_id ---
-async def get_medlogs_by_user(user_id: UUID):
-    query = medlogs.select().where(medlogs.c.user_id == user_id)
+async def get_medlogs_by_user(patient_id: UUID):
+    query = medlogs.select().where(medlogs.c.patient_id == patient_id)
     return await database.fetch_all(query)
 
 
 # --- Create medlog by device (chip_id) ---
 async def create_medlog_by_device(
-    device_id: str, user_id: UUID, pillname: str, scheduled_time: datetime, status: str
+    device_id: str,
+    patient_id: UUID,
+    pillname: str,
+    scheduled_time: datetime,
+    status: str,
 ):
     query = (
         medlogs.insert()
         .values(
-            user_id=user_id,
+            patient_id=patient_id,
             device_id=device_id,
             pillname=pillname,
             scheduled_time=scheduled_time,
@@ -353,3 +360,20 @@ async def cleanup_device_tokens(database, days: int = 90):
     query = device_tokens.delete().where(device_tokens.c.created_at < cutoff)
     result = await database.execute(query)
     return result
+
+
+async def create_notification_by_device(
+    database, device_id: str, user_id: UUID, message: str, created_at: datetime
+):
+    query = notifications.insert().values(
+        device_id=device_id, user_id=user_id, message=message, created_at=created_at
+    )
+    notif_id = await database.execute(query)
+    return await database.fetch_one(
+        notifications.select().where(notifications.c.id == notif_id)
+    )
+
+
+async def delete_notification(notification_id: UUID):
+    query = notifications.delete().where(notifications.c.id == notification_id)
+    return await database.execute(query)
