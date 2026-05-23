@@ -19,13 +19,15 @@ class UserBase(BaseModel):
     name: str
     email: EmailStr
     role: str = "patient"
+    caretaker_id: Optional[UUID]
 
 
 class UserCreate(BaseModel):
     name: str
     email: str
     password: Annotated[str, StringConstraints(min_length=8)]
-    role: str = "patient"
+    role: str  # must be "patient" or "caretaker"
+    caretaker_id: Optional[UUID] = None
 
 
 class UserRead(UserBase):
@@ -52,7 +54,7 @@ class DeviceBase(BaseModel):
 # --- For creating devices ---
 class DeviceCreate(BaseModel):
     chip_id: str
-    user_id: UUID  # link to a user
+    patient_id: UUID  # link to a patient
     name: str
     status: str = "offline"
 
@@ -64,7 +66,7 @@ class DeviceCreate(BaseModel):
 
 class DeviceRead(BaseModel):
     chip_id: str
-    user_id: UUID  # validated as UUID
+    patient_id: UUID  # validated as UUID
     name: str
     status: str
     last_seen: datetime
@@ -89,13 +91,13 @@ class ScheduleBase(BaseModel):
 
 
 class ScheduleCreate(ScheduleBase):
-    user_id: UUID
+    patient_id: UUID
     device_id: str
 
 
 class ScheduleRead(ScheduleBase):
     id: UUID
-    user_id: UUID
+    patient_id: UUID
     device_id: str
 
 
@@ -117,13 +119,13 @@ class MedlogBase(BaseModel):
 
 
 class MedlogCreate(MedlogBase):
-    user_id: UUID
+    patient_id: UUID
     device_id: str
 
 
 class MedlogRead(MedlogBase):
     id: UUID
-    user_id: UUID
+    patient_id: UUID
     device_id: str
 
 
@@ -131,6 +133,24 @@ class MedlogUpdate(BaseModel):
     pillname: Optional[str] = None
     scheduled_time: Optional[datetime] = None
     status: Optional[str] = None
+
+
+# 5. Notifications
+class NotificationBase(BaseModel):
+    message: str
+
+
+class NotificationCreate(NotificationBase):
+    device_id: str
+    user_id: UUID
+    created_at: datetime
+
+
+class NotificationRead(NotificationBase):
+    id: UUID
+    device_id: str
+    user_id: UUID
+    created_at: datetime
 
 
 # 6. Device Tokens
