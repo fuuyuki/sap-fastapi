@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from . import crud, firebase_client, schemas
 from .database import database
-from .models import device_tokens, devices, schedules, users
+from .models import device_tokens, devices, medlogs, schedules, users
 from .security import (
     create_access_token,
     decrypt_password,
@@ -60,6 +60,20 @@ async def register(user: schemas.UserCreate):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # Validate role
+    if user.role not in ("patient", "caretaker"):
+        raise HTTPException(
+            status_code=400, detail="Role must be 'patient' or 'caretaker'"
+        )
+
+    # Enforce caretaker relationship rules
+    if user.role == "patient" and not user.caretaker_id:
+        raise HTTPException(status_code=400, detail="Patients must have a caretaker_id")
+    if user.role == "caretaker" and user.caretaker_id is not None:
+        raise HTTPException(
+            status_code=400, detail="Caretakers cannot have a caretaker_id"
+        )
+
     # Hash password securely
     hashed_pw = hash_password(user.password)
 
@@ -71,6 +85,7 @@ async def register(user: schemas.UserCreate):
             email=user.email,
             password=hashed_pw,
             role=user.role,
+            caretaker_id=user.caretaker_id,
         )
         .returning(users.c.id)
     )
@@ -79,6 +94,7 @@ async def register(user: schemas.UserCreate):
     return {
         "id": str(user_id),
         "email": user.email,
+        "role": user.role,
         "message": "User registered successfully",
     }
 
@@ -177,10 +193,16 @@ async def list_devices():
     return await crud.get_devices()
 
 
-@app.get("/devices", response_model=schemas.DeviceRead)
-async def get_device(user_id: UUID | None = None, chip_id: str | None = None):
-    if user_id:
-        return await crud.get_device_by_user(user_id)
+@app.get("/devices")
+async def get_device(
+    patient_id: UUID | None = None,
+    caretaker_id: UUID | None = None,
+    chip_id: str | None = None,
+):
+    if patient_id:
+        return await crud.get_device_by_patient(patient_id)
+    if caretaker_id:
+        return await crud.get_devices_by_caretaker(caretaker_id)
     if chip_id:
         return await crud.get_device_by_device(chip_id)
     raise HTTPException(status_code=400, detail="Must provide user_id or chip_id")
@@ -188,9 +210,16 @@ async def get_device(user_id: UUID | None = None, chip_id: str | None = None):
 
 @app.post("/devices/", response_model=schemas.DeviceRead)
 async def create_device(device: schemas.DeviceCreate):
+    # Ensure patient exists and is role=patient
+    patient = await database.fetch_one(
+        users.select().where(users.c.id == device.patient_id)
+    )
+    if not patient or patient["role"] != "patient":
+        raise HTTPException(status_code=400, detail="Invalid patient_id")
+
     new_device = await crud.create_device(
         chip_id=device.chip_id,
-        user_id=device.user_id,
+        patient_id=device.patient_id,
         name=device.name,
         status=device.status,
     )
@@ -243,11 +272,62 @@ async def post_heartbeat(
 # ---------------------------
 # SCHEDULES (App + ESP32 + Admin)
 # ---------------------------
+# --- POST schedule for user_id (JWT protected) ---
+@app.get("/schedules/{user_id}", response_model=List[schemas.ScheduleRead])
+async def list_schedules_by_user(
+    user_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),  # JWT validation
+):
+    # Ensure the caller is the same as the requested user
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view these schedules"
+        )
+
+    # Fetch the user record
+    user = await database.fetch_one(users.select().where(users.c.id == user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user["role"] == "patient":
+        # Patient: return only their schedules
+        schedules_records = await crud.get_schedules_by_user(user_id)
+        if not schedules_records:
+            raise HTTPException(
+                status_code=404, detail="No schedules found for patient"
+            )
+        return schedules_records
+
+    elif user["role"] == "caretaker":
+        # Caretaker: return schedules of all their patients
+        patients_query = users.select().where(users.c.caretaker_id == user_id)
+        patients = await database.fetch_all(patients_query)
+        patient_ids = [p["id"] for p in patients]
+
+        if not patient_ids:
+            raise HTTPException(
+                status_code=404, detail="No patients found for caretaker"
+            )
+
+        schedules_query = schedules.select().where(
+            schedules.c.patient_id.in_(patient_ids)
+        )
+        schedules_records = await database.fetch_all(schedules_query)
+        if not schedules_records:
+            raise HTTPException(
+                status_code=404, detail="No schedules found for caretaker’s patients"
+            )
+        return schedules_records
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+
 @app.post("/schedules/bulk")
 async def create_bulk_schedules(payload: schemas.BulkScheduleCreate):
     values = [
         {
-            "user_id": s.user_id,
+            "patient_id": s.patient_id,
             "device_id": s.device_id,
             "pillname": s.pillname,
             "dose_time": s.dose_time,
@@ -260,55 +340,27 @@ async def create_bulk_schedules(payload: schemas.BulkScheduleCreate):
     return {"message": f"{len(values)} schedules created successfully"}
 
 
-@app.delete("/schedules/delete/{user_id}", response_model=schemas.DeleteResponse)
-async def delete_schedules_by_user(user_id: UUID):
-    query = (
-        schedules.delete()
-        .where(schedules.c.user_id == user_id)
-        .returning(schedules.c.id)
+@app.get(
+    "/schedules/{caretaker_id}/{patient_id}", response_model=List[schemas.ScheduleRead]
+)
+async def list_schedules_certain_patient_by_caretaker(
+    caretaker_id: UUID, patient_id: UUID
+):
+    # Verify patient belongs to caretaker
+    patient = await database.fetch_one(
+        users.select()
+        .where(users.c.id == patient_id)
+        .where(users.c.caretaker_id == caretaker_id)
     )
-    rows = await database.fetch_all(query)
-    count = len(rows)
-
-    if count == 0:
-        raise HTTPException(status_code=404, detail="No schedules found for this user")
-
-    return {"message": f"Schedules for user {user_id} deleted. {count} rows removed."}
-
-
-# --- GET schedules by user_id (JWT protected) ---
-@app.get("/schedules/{user_id}", response_model=List[schemas.ScheduleRead])
-async def list_schedules_by_user(
-    user_id: UUID,
-    current_user_id: str = Depends(get_current_user_id),  # JWT validation
-):
-    if str(user_id) != current_user_id:
+    if not patient:
         raise HTTPException(
-            status_code=403, detail="Not authorized to view these schedules"
+            status_code=403, detail="Patient not managed by this caretaker"
         )
 
-    schedules = await crud.get_schedules_by_user(user_id)
-    if not schedules:
-        raise HTTPException(status_code=404, detail="No schedules found for user")
-    return schedules
-
-
-# --- POST schedule for user_id (JWT protected) ---
-@app.post("/schedules/{user_id}", response_model=schemas.ScheduleRead)
-async def create_schedule_for_user(
-    user_id: UUID,
-    schedule: schemas.ScheduleCreate,
-    current_user_id: str = Depends(get_current_user_id),
-):
-    if str(user_id) != current_user_id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to create schedules for this user"
-        )
-
-    schedule_data = schedule.dict()
-    schedule_data["user_id"] = user_id
-    new_schedule = await crud.create_schedule_for_user(**schedule_data)
-    return new_schedule
+    schedules_records = await crud.get_schedules_by_user(patient_id)
+    if not schedules_records:
+        raise HTTPException(status_code=404, detail="No schedules found for patient")
+    return schedules_records
 
 
 # --- GET schedules by chip_id (API key protected) ---
@@ -341,25 +393,71 @@ async def delete_schedule(schedule_id: UUID):
     return {"detail": "Schedule deleted"}
 
 
+@app.delete("/schedules/delete/{patient_id}", response_model=schemas.DeleteResponse)
+async def delete_schedules_by_patient(patient_id: UUID):
+    query = (
+        schedules.delete()
+        .where(schedules.c.patient_id == patient_id)
+        .returning(schedules.c.id)
+    )
+    rows = await database.fetch_all(query)
+    count = len(rows)
+
+    if count == 0:
+        raise HTTPException(status_code=404, detail="No schedules found for this user")
+
+    return {
+        "message": f"Schedules for user {patient_id} deleted. {count} rows removed."
+    }
+
+
 # MEDLOGS (App + ESP32 + Admin)
 # ---------------------------
-
-
 # --- GET medlogs by user_id (JWT protected) ---
 @app.get("/medlogs/{user_id}", response_model=List[schemas.MedlogRead])
 async def list_medlogs_by_user(
     user_id: UUID,
     current_user_id: str = Depends(get_current_user_id),  # JWT validation
 ):
+    # Ensure the caller is the same as the requested user
     if str(user_id) != current_user_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to view these medlogs"
         )
 
-    logs = await crud.get_medlogs_by_user(user_id)
-    if not logs:
-        raise HTTPException(status_code=404, detail="No medlogs found for user")
-    return logs
+    # Fetch the user record
+    user = await database.fetch_one(users.select().where(users.c.id == user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user["role"] == "patient":
+        # Patient: return only their medlogs
+        logs = await crud.get_medlogs_by_user(user_id)
+        if not logs:
+            raise HTTPException(status_code=404, detail="No medlogs found for patient")
+        return logs
+
+    elif user["role"] == "caretaker":
+        # Caretaker: return medlogs of all their patients
+        patients_query = users.select().where(users.c.caretaker_id == user_id)
+        patients = await database.fetch_all(patients_query)
+        patient_ids = [p["id"] for p in patients]
+
+        if not patient_ids:
+            raise HTTPException(
+                status_code=404, detail="No patients found for caretaker"
+            )
+
+        medlogs_query = medlogs.select().where(medlogs.c.patient_id.in_(patient_ids))
+        logs = await database.fetch_all(medlogs_query)
+        if not logs:
+            raise HTTPException(
+                status_code=404, detail="No medlogs found for caretaker’s patients"
+            )
+        return logs
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid role")
 
 
 # --- POST medlog by device (API key protected) ---
@@ -378,7 +476,7 @@ async def create_medlog_by_device(
 
     new_log = await crud.create_medlog_by_device(
         device_id=device["chip_id"],
-        user_id=medlog.user_id,
+        patient_id=medlog.patient_id,
         pillname=medlog.pillname,
         scheduled_time=medlog.scheduled_time,
         status=medlog.status,
@@ -451,3 +549,43 @@ async def cleanup_device_tokens(days: int = 90):
     return {
         "message": f"Cleanup complete. {result} tokens deleted (older than {days} days)."
     }
+
+
+# ---------------------------
+# NOTIFICATIONS (App + ESP32)
+# ---------------------------
+# --- POST notification by device_id (API key protected) ---
+@app.post("/notifications/{device_id}", response_model=schemas.NotificationRead)
+async def create_notification_by_device(
+    device_id: str,
+    notif: schemas.NotificationCreate,
+    x_api_key: str = Header(..., alias="X-API-Key"),
+):
+    # Validate device + API key
+    device = await database.fetch_one(
+        devices.select().where(devices.c.chip_id == device_id)
+    )
+    if not device or device["api_key"] != x_api_key:
+        raise HTTPException(status_code=401, detail="Invalid device API key")
+
+    # Store notification (ESP32 posts at correct time)
+    new_notif = await crud.create_notification_by_device(
+        database,
+        device_id=device_id,
+        user_id=notif.user_id,
+        message=notif.message,
+        created_at=notif.created_at,
+    )
+
+    # Immediately send push to all tokens for this user
+    tokens = await crud.get_device_tokens_by_user(database, notif.user_id)
+    for token in tokens:
+        firebase_client.send_push(token, "Medication Reminder", notif.message)
+
+    return new_notif
+
+
+@app.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: UUID):
+    await crud.delete_notification(notification_id)
+    return {"detail": "Notification deleted"}
