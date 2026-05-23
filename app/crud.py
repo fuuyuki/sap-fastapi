@@ -7,7 +7,7 @@ from sqlalchemy import desc, func
 
 from .database import database
 from .firebase_client import send_push
-from .models import device_tokens, devices, medlogs, schedules, users
+from .models import device_tokens, devices, medlogs, notifications, schedules, users
 from .security import hash_password
 
 wib = pytz.timezone("Asia/Jakarta")
@@ -49,12 +49,12 @@ async def update_password(user_id: UUID, new_password: str):
 # ---------------------------
 # ADHERENCE ANALYTICS
 # ---------------------------
-async def get_adherence_streak(user_id: UUID) -> int:
+async def get_adherence_streak(patient_id: UUID) -> int:
     """Count consecutive 'taken' doses until first 'missed' in last 30 days."""
     start = datetime.now(wib).date() - timedelta(days=30)
     query = (
         medlogs.select()
-        .where(medlogs.c.user_id == user_id, medlogs.c.scheduled_time >= start)
+        .where(medlogs.c.patient_id == patient_id, medlogs.c.scheduled_time >= start)
         .order_by(medlogs.c.scheduled_time.desc())
     )
     rows = await database.fetch_all(query)
@@ -68,7 +68,7 @@ async def get_adherence_streak(user_id: UUID) -> int:
     return streak
 
 
-async def get_next_dose(user_id: UUID):
+async def get_next_dose(patient_id: UUID):
     """Return the next scheduled dose time-of-day for a user."""
     now = datetime.now(wib)
 
@@ -76,7 +76,7 @@ async def get_next_dose(user_id: UUID):
     query = (
         schedules.select()
         .with_only_columns(schedules.c.dose_time)
-        .where(schedules.c.user_id == user_id)
+        .where(schedules.c.patient_id == patient_id)
     )
     rows = await database.fetch_all(query)
 
@@ -102,14 +102,14 @@ async def get_next_dose(user_id: UUID):
     # return {"next_dose": next_candidate}
 
 
-async def get_weekly_adherence(user_id: UUID) -> float:
+async def get_weekly_adherence(patient_id: UUID) -> float:
     start = datetime.now(wib).replace(tzinfo=None) - timedelta(days=7)
 
     taken_query = (
         medlogs.select()
         .with_only_columns(func.count())
         .where(
-            medlogs.c.user_id == user_id,
+            medlogs.c.patient_id == patient_id,
             medlogs.c.status == "taken",
             medlogs.c.scheduled_time >= start,
         )
@@ -120,7 +120,7 @@ async def get_weekly_adherence(user_id: UUID) -> float:
         medlogs.select()
         .with_only_columns(func.count())
         .where(
-            medlogs.c.user_id == user_id,
+            medlogs.c.patient_id == patient_id,
             medlogs.c.status == "missed",
             medlogs.c.scheduled_time >= start,
         )
