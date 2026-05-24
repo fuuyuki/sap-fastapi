@@ -166,9 +166,9 @@ async def create_device(
 # --- Get schedules by user_id ---
 async def get_device_by_patient(patient_id: UUID):
     query = devices.select().where(devices.c.patient_id == patient_id)
-    record = await database.fetch_all(query)
-    return dict(record) if record else None
-
+    #record = await database.fetch_one(query)
+    #return dict(record) if record else None
+    return await database.fetch_all(query)
 
 async def get_devices_by_caretaker(caretaker_id: UUID):
     # Get all patients managed by this caretaker
