@@ -487,6 +487,29 @@ async def list_medlogs_by_user(
     else:
         raise HTTPException(status_code=400, detail="Invalid role")
 
+@app.get(
+    "/medlogs/{caretaker_id}/{patient_id}", response_model=List[schemas.MedlogRead]
+)
+async def list_medlogs_certain_patient_by_caretaker(
+    caretaker_id: UUID, patient_id: UUID
+):
+    # Verify patient belongs to caretaker
+    patient = await database.fetch_one(
+        users.select()
+        .where(users.c.id == patient_id)
+        .where(users.c.caretaker_id == caretaker_id)
+    )
+    if not patient:
+        raise HTTPException(
+            status_code=403, detail="Patient not managed by this caretaker"
+        )
+
+    medlogs_records = await crud.get_medlogs_by_user(patient_id)
+    if not medlogs_records:
+        raise HTTPException(status_code=404, detail="No medlogs found for patient")
+    return medlogs_records
+
+
 
 # --- POST medlog by device (API key protected) ---
 @app.post("/medlogs/{chip_id}", response_model=schemas.MedlogRead)
