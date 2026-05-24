@@ -341,20 +341,29 @@ async def list_schedules_by_user(
         raise HTTPException(status_code=400, detail="Invalid role")
 
 
-# --- POST schedule for user_id (JWT protected) ---
-@app.post("/schedules/{user_id}", response_model=schemas.ScheduleRead)
-async def create_schedule_for_user(
-    user_id: UUID,
+@app.post("/schedules/{patient_id}", response_model=schemas.ScheduleRead)
+async def create_schedule_for_patient(
+    patient_id: UUID,
     schedule: schemas.ScheduleCreate,
     current_user_id: str = Depends(get_current_user_id),
 ):
-    if str(user_id) != current_user_id:
+    # Fetch patient record
+    patient = await database.fetch_one(users.select().where(users.c.id == patient_id))
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Allow if current user is the patient OR their caretaker
+    if (
+        str(patient_id) != current_user_id
+        and str(patient["caretaker_id"]) != current_user_id
+    ):
         raise HTTPException(
-            status_code=403, detail="Not authorized to create schedules for this user"
+            status_code=403,
+            detail="Not authorized to create schedules for this patient",
         )
 
     schedule_data = schedule.dict()
-    schedule_data["user_id"] = user_id
+    schedule_data["patient_id"] = patient_id  # use patient_id instead of user_id
     new_schedule = await crud.create_schedule_for_user(**schedule_data)
     return new_schedule
 
