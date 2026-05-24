@@ -341,21 +341,22 @@ async def list_schedules_by_user(
         raise HTTPException(status_code=400, detail="Invalid role")
 
 
-@app.post("/schedules/bulk")
-async def create_bulk_schedules(payload: schemas.BulkScheduleCreate):
-    values = [
-        {
-            "patient_id": s.patient_id,
-            "device_id": s.device_id,
-            "pillname": s.pillname,
-            "dose_time": s.dose_time,
-            "repeat_days": s.repeat_days,
-        }
-        for s in payload.schedules
-    ]
-    query = schedules.insert()
-    await database.execute_many(query, values)
-    return {"message": f"{len(values)} schedules created successfully"}
+# --- POST schedule for user_id (JWT protected) ---
+@app.post("/schedules/{user_id}", response_model=schemas.ScheduleRead)
+async def create_schedule_for_user(
+    user_id: UUID,
+    schedule: schemas.ScheduleCreate,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    if str(user_id) != current_user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to create schedules for this user"
+        )
+
+    schedule_data = schedule.dict()
+    schedule_data["user_id"] = user_id
+    new_schedule = await crud.create_schedule_for_user(**schedule_data)
+    return new_schedule
 
 
 @app.get(
