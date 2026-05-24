@@ -409,10 +409,20 @@ async def list_schedules_by_device(
         raise HTTPException(status_code=404, detail="No schedules found for device")
     return schedules
 
-
 @app.put("/schedules/{schedule_id}", response_model=schemas.ScheduleRead)
 async def update_schedule(schedule_id: UUID, update: schemas.ScheduleUpdate):
-    return await crud.update_schedule(schedule_id, update.dict(exclude_unset=True))
+    query = (
+        schedules.update()
+        .where(schedules.c.id == schedule_id)
+        .values(**update.dict(exclude_unset=True))
+        .returning(*schedules.c)   # return all columns
+    )
+    record = await database.fetch_one(query)
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
+    return record
 
 
 @app.delete("/schedules/{schedule_id}")
