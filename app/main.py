@@ -12,8 +12,6 @@ from .database import database
 from .models import device_tokens, devices, medlogs, schedules, users
 from .security import (
     create_access_token,
-    decrypt_password,
-    encrypt_password,
     get_current_user_id,
     hash_password,
     verify_password,
@@ -409,13 +407,14 @@ async def list_schedules_by_device(
         raise HTTPException(status_code=404, detail="No schedules found for device")
     return schedules
 
+
 @app.put("/schedules/{schedule_id}", response_model=schemas.ScheduleRead)
 async def update_schedule(schedule_id: UUID, update: schemas.ScheduleUpdate):
     query = (
         schedules.update()
         .where(schedules.c.id == schedule_id)
         .values(**update.dict(exclude_unset=True))
-        .returning(*schedules.c)   # return all columns
+        .returning(*schedules.c)  # return all columns
     )
     record = await database.fetch_one(query)
 
@@ -497,6 +496,7 @@ async def list_medlogs_by_user(
     else:
         raise HTTPException(status_code=400, detail="Invalid role")
 
+
 @app.get(
     "/medlogs/{caretaker_id}/{patient_id}", response_model=List[schemas.MedlogRead]
 )
@@ -518,7 +518,6 @@ async def list_medlogs_certain_patient_by_caretaker(
     if not medlogs_records:
         raise HTTPException(status_code=404, detail="No medlogs found for patient")
     return medlogs_records
-
 
 
 # --- POST medlog by device (API key protected) ---
