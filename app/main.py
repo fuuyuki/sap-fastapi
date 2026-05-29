@@ -390,7 +390,7 @@ async def list_schedules_certain_patient_by_caretaker(
 
 
 # --- GET schedules by chip_id (API key protected) ---
-@app.get("/schedules/device/{chip_id}", response_model=List[schemas.ScheduleRead])
+@app.get("/schedules/by-device/{chip_id}", response_model=List[schemas.ScheduleRead])
 async def list_schedules_by_device(
     chip_id: str,
     x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
