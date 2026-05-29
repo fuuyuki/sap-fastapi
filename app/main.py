@@ -521,10 +521,7 @@ async def list_medlogs_certain_patient_by_caretaker(
     return medlogs_records
 
 
-from fastapi import Request
-
-
-@app.post("/medlogs/debug/{chip_id}")
+@app.post("/medlogs/{chip_id}")
 async def debug_medlog_payload(
     chip_id: str,
     x_api_key: str = Header(..., alias="X-API-Key"),
