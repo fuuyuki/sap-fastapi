@@ -4,7 +4,7 @@ from typing import List
 from uuid import UUID
 
 import pytz
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
 from . import crud, firebase_client, schemas
@@ -521,36 +521,56 @@ async def list_medlogs_certain_patient_by_caretaker(
     return medlogs_records
 
 
-# --- POST medlog by device (API key protected) ---
 from fastapi import Request
 
 
-@app.post("/medlogs/{chip_id}", response_model=schemas.MedlogRead)
-async def create_medlog_by_device(
+@app.post("/medlogs/debug/{chip_id}")
+async def debug_medlog_payload(
     chip_id: str,
-    medlog: schemas.MedlogCreate,
     x_api_key: str = Header(..., alias="X-API-Key"),
-    request: Request = None,  # add Request
+    request: Request = None,
 ):
-    # Debug: print raw JSON payload
+    # Capture raw JSON body
     body = await request.json()
-    print("Received Medlog payload:", body)
+    print("Raw Medlog payload:", body)
 
-    # Validate device + API key
+    # Validate device + API key (optional, keep if you want to check auth)
     device = await database.fetch_one(
         devices.select().where(devices.c.chip_id == chip_id)
     )
     if not device or device["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Invalid device API key")
 
-    new_log = await crud.create_medlog_by_device(
-        device_id=device["chip_id"],
-        patient_id=medlog.patient_id,
-        pillname=medlog.pillname,
-        scheduled_time=medlog.scheduled_time,
-        status=medlog.status,
-    )
-    return new_log
+    # Just return the raw payload for debugging
+    return {"received_payload": body}
+
+
+# @app.post("/medlogs/{chip_id}", response_model=schemas.MedlogRead)
+# async def create_medlog_by_device(
+#     chip_id: str,
+#     medlog: schemas.MedlogCreate,
+#     x_api_key: str = Header(..., alias="X-API-Key"),
+#     request: Request = None,  # add Request
+# ):
+#     # Debug: print raw JSON payload
+#     body = await request.json()
+#     print("Received Medlog payload:", body)
+
+#     # Validate device + API key
+#     device = await database.fetch_one(
+#         devices.select().where(devices.c.chip_id == chip_id)
+#     )
+#     if not device or device["api_key"] != x_api_key:
+#         raise HTTPException(status_code=401, detail="Invalid device API key")
+
+#     new_log = await crud.create_medlog_by_device(
+#         device_id=device["chip_id"],
+#         patient_id=medlog.patient_id,
+#         pillname=medlog.pillname,
+#         scheduled_time=medlog.scheduled_time,
+#         status=medlog.status,
+#     )
+#     return new_log
 
 
 @app.put("/medlogs/{medlog_id}", response_model=schemas.MedlogRead)
@@ -624,37 +644,48 @@ async def cleanup_device_tokens(days: int = 90):
 # NOTIFICATIONS (App + ESP32)
 # ---------------------------
 # --- POST notification by device_id (API key protected) ---
-@app.post("/notifications/{device_id}", response_model=schemas.NotificationRead)
-async def create_notification_by_device(
+@app.post("/notifications/{device_id}")
+async def debug_notification(
     device_id: str,
-    notif: schemas.NotificationCreate,
     x_api_key: str = Header(..., alias="X-API-Key"),
-    request: Request = None,  # add Request
+    request: Request = None,
 ):
-    # Debug: print raw JSON payload
     body = await request.json()
-    print("Received Notification payload:", body)
+    print("Raw Notification payload:", body)
+    return {"debug": body}
 
-    # Validate device + API key
-    device = await database.fetch_one(
-        devices.select().where(devices.c.chip_id == device_id)
-    )
-    if not device or device["api_key"] != x_api_key:
-        raise HTTPException(status_code=401, detail="Invalid device API key")
 
-    new_notif = await crud.create_notification_by_device(
-        database,
-        device_id=device_id,
-        user_id=notif.user_id,
-        message=notif.message,
-        created_at=notif.created_at,
-    )
+# @app.post("/notifications/{device_id}", response_model=schemas.NotificationRead)
+# async def create_notification_by_device(
+#     device_id: str,
+#     notif: schemas.NotificationCreate,
+#     x_api_key: str = Header(..., alias="X-API-Key"),
+#     request: Request = None,  # add Request
+# ):
+#     # Debug: print raw JSON payload
+#     body = await request.json()
+#     print("Received Notification payload:", body)
 
-    tokens = await crud.get_device_tokens_by_user(database, notif.user_id)
-    for token in tokens:
-        firebase_client.send_push(token, "Medication Reminder", notif.message)
+#     # Validate device + API key
+#     device = await database.fetch_one(
+#         devices.select().where(devices.c.chip_id == device_id)
+#     )
+#     if not device or device["api_key"] != x_api_key:
+#         raise HTTPException(status_code=401, detail="Invalid device API key")
 
-    return new_notif
+#     new_notif = await crud.create_notification_by_device(
+#         database,
+#         device_id=device_id,
+#         user_id=notif.user_id,
+#         message=notif.message,
+#         created_at=notif.created_at,
+#     )
+
+#     tokens = await crud.get_device_tokens_by_user(database, notif.user_id)
+#     for token in tokens:
+#         firebase_client.send_push(token, "Medication Reminder", notif.message)
+
+#     return new_notif
 
 
 @app.delete("/notifications/{notification_id}")
