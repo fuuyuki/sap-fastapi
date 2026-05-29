@@ -289,7 +289,7 @@ async def post_heartbeat(
 # SCHEDULES (App + ESP32 + Admin)
 # ---------------------------
 # --- POST schedule for user_id (JWT protected) ---
-@app.get("/schedules/{user_id}", response_model=List[schemas.ScheduleRead])
+@app.get("/schedules/by-user/{user_id}", response_model=List[schemas.ScheduleRead])
 async def list_schedules_by_user(
     user_id: UUID,
     current_user_id: str = Depends(get_current_user_id),  # JWT validation
@@ -367,7 +367,8 @@ async def create_schedule_for_patient(
 
 
 @app.get(
-    "/schedules/{caretaker_id}/{patient_id}", response_model=List[schemas.ScheduleRead]
+    "/schedules/by-caretaker/{caretaker_id}/{patient_id}",
+    response_model=List[schemas.ScheduleRead],
 )
 async def list_schedules_certain_patient_by_caretaker(
     caretaker_id: UUID, patient_id: UUID
