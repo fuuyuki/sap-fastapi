@@ -522,12 +522,20 @@ async def list_medlogs_certain_patient_by_caretaker(
 
 
 # --- POST medlog by device (API key protected) ---
+from fastapi import Request
+
+
 @app.post("/medlogs/{chip_id}", response_model=schemas.MedlogRead)
 async def create_medlog_by_device(
     chip_id: str,
     medlog: schemas.MedlogCreate,
-    x_api_key: str = Header(..., alias="X-API-Key"),  # API key header
+    x_api_key: str = Header(..., alias="X-API-Key"),
+    request: Request = None,  # add Request
 ):
+    # Debug: print raw JSON payload
+    body = await request.json()
+    print("Received Medlog payload:", body)
+
     # Validate device + API key
     device = await database.fetch_one(
         devices.select().where(devices.c.chip_id == chip_id)
@@ -621,7 +629,12 @@ async def create_notification_by_device(
     device_id: str,
     notif: schemas.NotificationCreate,
     x_api_key: str = Header(..., alias="X-API-Key"),
+    request: Request = None,  # add Request
 ):
+    # Debug: print raw JSON payload
+    body = await request.json()
+    print("Received Notification payload:", body)
+
     # Validate device + API key
     device = await database.fetch_one(
         devices.select().where(devices.c.chip_id == device_id)
@@ -629,7 +642,6 @@ async def create_notification_by_device(
     if not device or device["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Invalid device API key")
 
-    # Store notification (ESP32 posts at correct time)
     new_notif = await crud.create_notification_by_device(
         database,
         device_id=device_id,
@@ -638,7 +650,6 @@ async def create_notification_by_device(
         created_at=notif.created_at,
     )
 
-    # Immediately send push to all tokens for this user
     tokens = await crud.get_device_tokens_by_user(database, notif.user_id)
     for token in tokens:
         firebase_client.send_push(token, "Medication Reminder", notif.message)
