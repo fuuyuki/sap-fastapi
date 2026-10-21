@@ -35,6 +35,9 @@ postgres_data/
 pgdata/
 *.sqlite3
 
+# --- Medication evidence snapshots (MEDIA_DIR) ---
+media/
+
 # --- Logs / build output ---
 *.log
 build/
