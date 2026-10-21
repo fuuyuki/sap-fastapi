@@ -54,7 +54,27 @@ docker-compose up -d --build
 ```
 Access API at:
 ```code
-http://localhost:8000/docs
+http://localhost:8080/docs
+```
+
+#### Database (created automatically)
+You do **not** need a PostgreSQL server on the host machine. The `db`
+service creates the `sapdb` database and loads the schema + seed data from
+`db/init.sql` on first start. The API container waits until PostgreSQL is
+healthy before starting.
+
+The init script only runs when the data volume is empty. To wipe the
+database and re-seed it from `db/init.sql`:
+```bash
+docker-compose down -v
+docker-compose up -d --build
+```
+
+If a local PostgreSQL already occupies port `5432`, publish the container on
+a different port (this does not affect the API, which connects over the
+Docker network):
+```bash
+DB_PORT=5433 docker-compose up -d --build
 ```
 
 ### 📂 Project Structure
