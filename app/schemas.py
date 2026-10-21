@@ -134,6 +134,11 @@ class MedlogRead(MedlogBase):
     id: UUID
     patient_id: UUID
     device_id: str
+    # Optional proof attached by the Android app (ESP32 still sets status).
+    verification_method: Optional[str] = None
+    verification_confidence: Optional[float] = None
+    verified_at: Optional[datetime] = None
+    evidence_key: Optional[str] = None
 
 
 class MedlogUpdate(BaseModel):

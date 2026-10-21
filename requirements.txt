@@ -25,3 +25,6 @@ python-multipart==0.0.22
 pytz
 firebase_admin
 
+# Image normalization for medication evidence snapshots
+pillow==11.0.0
+

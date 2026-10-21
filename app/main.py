@@ -4,10 +4,20 @@ from typing import List
 from uuid import UUID
 
 import pytz
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
-from . import crud, firebase_client, schemas
+from . import crud, firebase_client, media, schemas
 from .database import database
 from .models import device_tokens, devices, medlogs, schedules, users
 from .security import (
@@ -451,6 +461,122 @@ async def delete_schedules_by_patient(patient_id: UUID):
 
 # MEDLOGS (App + ESP32 + Admin)
 # ---------------------------
+# --- Camera evidence for a medlog (Android app, JWT patient) ---
+# The ESP32 still owns the taken/missed status; the app only attaches proof.
+# These routes are declared before /medlogs/{caretaker_id}/{patient_id} so
+# that "/medlogs/<uuid>/evidence" is not captured by the two-UUID route.
+@app.put("/medlogs/{medlog_id}/evidence", response_model=schemas.MedlogRead)
+async def upload_medlog_evidence(
+    medlog_id: UUID,
+    photo: UploadFile = File(...),
+    confidence: float = Form(...),
+    captured_at: datetime | None = Form(None),
+    method: str = Form("camera_mouth_open"),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    medlog = await crud.get_medlog(medlog_id)
+    if not medlog:
+        raise HTTPException(status_code=404, detail="Medlog not found")
+
+    # Only the patient who owns this log may attach proof.
+    if str(medlog["patient_id"]) != current_user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this medlog")
+
+    if not 0.0 <= confidence <= 1.0:
+        raise HTTPException(
+            status_code=400, detail="confidence must be between 0 and 1"
+        )
+    if len(method) > 30:
+        raise HTTPException(status_code=400, detail="method is too long")
+
+    if photo.content_type not in media.ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=415, detail="Only JPEG, PNG or WebP images are accepted"
+        )
+
+    raw = await photo.read(media.MAX_UPLOAD_BYTES + 1)
+    await photo.close()
+    if len(raw) > media.MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "Photo is too large "
+                f"(max {media.MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"
+            ),
+        )
+
+    try:
+        evidence_key = media.save_evidence(medlog_id, raw)
+    except media.EvidenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    verified_at = captured_at or datetime.now(wib)
+    if verified_at.tzinfo is None:
+        verified_at = wib.localize(verified_at)
+
+    return await crud.set_medlog_evidence(
+        medlog_id,
+        method=method,
+        confidence=round(confidence, 4),
+        verified_at=verified_at,
+        evidence_key=evidence_key,
+    )
+
+
+@app.get("/medlogs/{medlog_id}/evidence")
+async def get_medlog_evidence(
+    medlog_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    medlog = await crud.get_medlog(medlog_id)
+    if not medlog or not medlog["evidence_key"]:
+        raise HTTPException(status_code=404, detail="No evidence for this medlog")
+
+    # Visible to the patient themselves and to their caretaker.
+    patient = await database.fetch_one(
+        users.select().where(users.c.id == medlog["patient_id"])
+    )
+    allowed = str(medlog["patient_id"]) == current_user_id or (
+        patient
+        and patient["caretaker_id"]
+        and str(patient["caretaker_id"]) == current_user_id
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view this evidence"
+        )
+
+    try:
+        path = media.resolve_evidence(medlog["evidence_key"])
+    except media.EvidenceError:
+        raise HTTPException(status_code=404, detail="Evidence file not found")
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Evidence file not found")
+
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "private, max-age=300"},
+    )
+
+
+@app.delete("/medlogs/{medlog_id}/evidence")
+async def delete_medlog_evidence(
+    medlog_id: UUID,
+    current_user_id: str = Depends(get_current_user_id),
+):
+    medlog = await crud.get_medlog(medlog_id)
+    if not medlog:
+        raise HTTPException(status_code=404, detail="Medlog not found")
+    if str(medlog["patient_id"]) != current_user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this medlog")
+
+    if medlog["evidence_key"]:
+        media.delete_evidence(medlog["evidence_key"])
+    await crud.clear_medlog_evidence(medlog_id)
+    return {"detail": "Evidence removed"}
+
+
 # --- GET medlogs by user_id (JWT protected) ---
 @app.get("/medlogs/{user_id}", response_model=List[schemas.MedlogRead])
 async def list_medlogs_by_user(
@@ -577,6 +703,9 @@ async def update_medlog(medlog_id: UUID, update: schemas.MedlogUpdate):
 
 @app.delete("/medlogs/{medlog_id}")
 async def delete_medlog(medlog_id: UUID):
+    medlog = await crud.get_medlog(medlog_id)
+    if medlog and medlog["evidence_key"]:
+        media.delete_evidence(medlog["evidence_key"])
     await crud.delete_medlog(medlog_id)
     return {"detail": "Medlog deleted"}
 

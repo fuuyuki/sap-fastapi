@@ -96,7 +96,11 @@ CREATE TABLE public.medlogs (
     device_id character varying(100) NOT NULL,
     pillname character varying(100) NOT NULL,
     scheduled_time timestamp without time zone DEFAULT now() NOT NULL,
-    status character varying(50) NOT NULL
+    status character varying(50) NOT NULL,
+    verification_method character varying(30),
+    verification_confidence double precision,
+    verified_at timestamp with time zone,
+    evidence_key character varying(255)
 );
 
 

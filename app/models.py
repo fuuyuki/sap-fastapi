@@ -7,6 +7,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     MetaData,
@@ -96,6 +97,11 @@ medlogs = Table(
     Column("pillname", String(100), nullable=False),
     Column("scheduled_time", TIMESTAMP(timezone=False), nullable=False),
     Column("status", String(50), nullable=False),  # "taken" or "missed"
+    # Optional Android camera evidence attached after the ESP32 reports the log.
+    Column("verification_method", String(30), nullable=True),
+    Column("verification_confidence", Float, nullable=True),
+    Column("verified_at", TIMESTAMP(timezone=True), nullable=True),
+    Column("evidence_key", String(255), nullable=True),
 )
 
 # 5. Notifications

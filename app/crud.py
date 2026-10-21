@@ -330,6 +330,42 @@ async def update_medlog(medlog_id: UUID, data: dict):
     return await get_medlog(medlog_id)
 
 
+async def set_medlog_evidence(
+    medlog_id: UUID,
+    method: str,
+    confidence: float,
+    verified_at: datetime,
+    evidence_key: str,
+):
+    query = (
+        medlogs.update()
+        .where(medlogs.c.id == medlog_id)
+        .values(
+            verification_method=method,
+            verification_confidence=confidence,
+            verified_at=verified_at,
+            evidence_key=evidence_key,
+        )
+    )
+    await database.execute(query)
+    return await get_medlog(medlog_id)
+
+
+async def clear_medlog_evidence(medlog_id: UUID):
+    query = (
+        medlogs.update()
+        .where(medlogs.c.id == medlog_id)
+        .values(
+            verification_method=None,
+            verification_confidence=None,
+            verified_at=None,
+            evidence_key=None,
+        )
+    )
+    await database.execute(query)
+    return await get_medlog(medlog_id)
+
+
 async def delete_medlog(medlog_id: UUID):
     query = medlogs.delete().where(medlogs.c.id == medlog_id)
     return await database.execute(query)
