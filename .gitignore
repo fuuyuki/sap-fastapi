@@ -1,5 +1,53 @@
-env/
+# --- Python bytecode / caches ---
 __pycache__/
-*.pyc
-postgres_data/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
 
+# --- Virtual environments ---
+env/
+venv/
+.venv/
+ENV/
+
+# --- Environment files & secrets ---
+# .env holds DATABASE_URL / SECRET_KEY; never commit it.
+.env
+.env.*
+!.env.example
+# Firebase service-account credentials (contains a private key!)
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
+*.pem
+*.key
+*.p12
+
+# --- Local database data ---
+# Compose uses a named volume, but keep these in case of bind mounts.
+postgres_data/
+pgdata/
+*.sqlite3
+
+# --- Logs / build output ---
+*.log
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- IDE / editor / OS ---
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# NOTE: db/init.sql is the schema seed used by Docker and MUST stay tracked.

@@ -2,8 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7bIvZ4FQF7n0bjPs9RFfKiEXax9p9bQbncARROCzlZSDPLnpkjXKNFf4vHrwITk
-
 -- Dumped from database version 14.23 (Ubuntu 14.23-0ubuntu0.22.04.1)
 -- Dumped by pg_dump version 14.23 (Ubuntu 14.23-0ubuntu0.22.04.1)
 
@@ -333,6 +331,4 @@ ALTER TABLE ONLY public.users
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict 7bIvZ4FQF7n0bjPs9RFfKiEXax9p9bQbncARROCzlZSDPLnpkjXKNFf4vHrwITk
 

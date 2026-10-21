@@ -6,24 +6,36 @@ services:
     ports:
       - "8080:8000"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://fauxpg:kelapasawit1@db/sapdb
+      - DATABASE_URL=postgresql+psycopg2://fauxpg:kelapasawit1@db:5432/sapdb
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:15
     container_name: fastapi_db
     restart: always
     ports:
-      - "5432:5432"
+      # Host port is configurable so it won't clash with a local PostgreSQL.
+      # e.g. DB_PORT=5433 docker compose up -d
+      - "${DB_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: fauxpg
       POSTGRES_PASSWORD: kelapasawit1
       POSTGRES_DB: sapdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d   # mount init.sql and other scripts
+      # Seed scripts: every *.sql / *.sh here runs automatically the first
+      # time the volume is initialized (empty data directory).
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Force TCP so it only reports ready once the real server is up
+      # (the temporary server used during init does not listen on TCP).
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U fauxpg -d sapdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
 volumes:
   postgres_data:
-
