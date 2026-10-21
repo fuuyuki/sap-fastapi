@@ -7,6 +7,10 @@ services:
       - "8080:8000"
     environment:
       - DATABASE_URL=postgresql+psycopg2://fauxpg:kelapasawit1@db:5432/sapdb
+      - MEDIA_DIR=/app/media
+    volumes:
+      # Persist evidence snapshots across container rebuilds.
+      - evidence_data:/app/media
     depends_on:
       db:
         condition: service_healthy
@@ -39,3 +43,4 @@ services:
 
 volumes:
   postgres_data:
+  evidence_data:
