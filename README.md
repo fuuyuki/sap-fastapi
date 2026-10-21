@@ -123,6 +123,27 @@ docker-compose up -d --build
 > POST /medlogs/
 >
 
+### 📷 Medication evidence (Android camera)
+
+The ESP32 remains the source of truth for `taken` / `missed`. The Android app
+can attach an optional camera snapshot + confidence to an existing medlog as
+additional proof.
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `PUT` | `/medlogs/{medlog_id}/evidence` | Patient JWT | Multipart: `photo`, `confidence` (0..1), optional `captured_at`, `method` |
+| `GET` | `/medlogs/{medlog_id}/evidence` | Patient or caretaker JWT | Returns the stored JPEG |
+| `DELETE` | `/medlogs/{medlog_id}/evidence` | Patient JWT | Removes the snapshot |
+
+Snapshots are re-encoded server-side (max 480px JPEG, EXIF/GPS stripped) and
+stored under `MEDIA_DIR` (default `media/`, `/app/media` inside Docker).
+Uploads are capped at 5 MB; the stored file is usually only tens of KB.
+
+For an existing database volume, apply the column migration once:
+```bash
+docker compose exec -T db psql -U fauxpg -d sapdb < db/migrations/002_medlog_evidence.sql
+```
+
 ### ✅ Next Steps
 - Integrate with Android app (Dashboard, Schedule, Logs, Add Medication).
 - Connect ESP32 devices for real‑time medication tracking.
